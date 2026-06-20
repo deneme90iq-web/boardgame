@@ -1,9 +1,11 @@
 /**
- * Kızma Birader - Premium Digital Edition
- * Game Engine & Controller
+ * BoardGame Hub - Premium Digital Edition
+ * Modularized OOP Architecture
  */
 
-// Sound Engine using Web Audio API
+// ==========================================
+// 1. SOUND ENGINE (Web Audio API)
+// ==========================================
 class SoundEngine {
     constructor() {
         this.ctx = null;
@@ -129,37 +131,27 @@ class SoundEngine {
     }
 }
 
-const sounds = new SoundEngine();
-
-// Coordinates mapping for 15x15 board cells
-// Clockwise common perimeter track path
+// ==========================================
+// 2. CONSTANTS & GAME SPECIFICATIONS
+// ==========================================
 const TRACK_COORDS = [
-    { r: 6, c: 1 }, { r: 6, c: 2 }, { r: 6, c: 3 }, { r: 6, c: 4 }, { r: 6, c: 5 }, // Red area track exit
+    { r: 6, c: 1 }, { r: 6, c: 2 }, { r: 6, c: 3 }, { r: 6, c: 4 }, { r: 6, c: 5 },
     { r: 5, c: 6 }, { r: 4, c: 6 }, { r: 3, c: 6 }, { r: 2, c: 6 }, { r: 1, c: 6 }, { r: 0, c: 6 },
     { r: 0, c: 7 },
-    { r: 0, c: 8 }, { r: 1, c: 8 }, { r: 2, c: 8 }, { r: 3, c: 8 }, { r: 4, c: 8 }, { r: 5, c: 8 }, // Green area track exit
+    { r: 0, c: 8 }, { r: 1, c: 8 }, { r: 2, c: 8 }, { r: 3, c: 8 }, { r: 4, c: 8 }, { r: 5, c: 8 },
     { r: 6, c: 9 }, { r: 6, c: 10 }, { r: 6, c: 11 }, { r: 6, c: 12 }, { r: 6, c: 13 }, { r: 6, c: 14 },
     { r: 7, c: 14 },
-    { r: 8, c: 14 }, { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }, { r: 8, c: 10 }, { r: 8, c: 9 }, // Blue area track exit
+    { r: 8, c: 14 }, { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }, { r: 8, c: 10 }, { r: 8, c: 9 },
     { r: 9, c: 8 }, { r: 10, c: 8 }, { r: 11, c: 8 }, { r: 12, c: 8 }, { r: 13, c: 8 }, { r: 14, c: 8 },
     { r: 14, c: 7 },
-    { r: 14, c: 6 }, { r: 13, c: 6 }, { r: 12, c: 6 }, { r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 }, // Yellow area track exit
+    { r: 14, c: 6 }, { r: 13, c: 6 }, { r: 12, c: 6 }, { r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 },
     { r: 8, c: 5 }, { r: 8, c: 4 }, { r: 8, c: 3 }, { r: 8, c: 2 }, { r: 8, c: 1 }, { r: 8, c: 0 },
-    { r: 7, c: 0 },
-    { r: 6, c: 0 }
+    { r: 7, c: 0 }, { r: 6, c: 0 }
 ];
 
-// Safe zones indices
 const SAFE_INDICES = [0, 8, 13, 22, 26, 34, 39, 48];
-
-// Color definitions
 const COLORS = ['red', 'blue', 'green', 'yellow'];
-const COLOR_NAMES = {
-    red: 'Kırmızı',
-    blue: 'Mavi',
-    green: 'Yeşil',
-    yellow: 'Sarı'
-};
+const COLOR_NAMES = { red: 'Kırmızı', blue: 'Mavi', green: 'Yeşil', yellow: 'Sarı' };
 
 const COLOR_CONFIGS = {
     red: {
@@ -188,770 +180,845 @@ const COLOR_CONFIGS = {
     }
 };
 
-// Game State
-let gameState = {
-    players: {}, // color -> { type: 'human'|'ai'|'none', finished: 0 }
-    activePlayers: [], // array of colors in order
-    currentTurnIndex: 0,
-    diceVal: null,
-    hasRolled: false,
-    extraTurn: false,
-    tokens: {}, // color -> array of 4 tokens: { id: 0..3, posType: 'base'|'track'|'homePath'|'finished', posIndex: 0.. }
-    history: []
-};
+// ==========================================
+// 3. ACCOUNT MANAGER (Profiles & Statistics)
+// ==========================================
+class AccountManager {
+    constructor() {
+        this.accounts = [];
+        this.activeUsername = "";
+    }
 
-// DOM References
-const hubPanel = document.getElementById('hub-panel');
-const setupPanel = document.getElementById('setup-panel');
-const gamePanel = document.getElementById('game-panel');
-const ludoBoard = document.getElementById('ludo-board');
-const currentPlayerDisplay = document.getElementById('current-player-display');
-const rollDiceBtn = document.getElementById('roll-dice-btn');
-const rollResultBadge = document.getElementById('roll-result-badge');
-const dice3D = document.getElementById('dice-3d');
-const gameLog = document.getElementById('game-log');
-const rulesBtn = document.getElementById('rules-btn');
-const soundBtn = document.getElementById('sound-btn');
-const themeBtn = document.getElementById('theme-btn');
-const rulesModal = document.getElementById('rules-modal');
-const closeRulesBtn = document.getElementById('close-rules-btn');
-const winnerModal = document.getElementById('winner-modal');
-const winnerTitle = document.getElementById('winner-title');
-const winnerText = document.getElementById('winnerText'); // wait, let's look at index.html, it's winner-text. Let's use document.getElementById('winner-text')
-const winnerTextEl = document.getElementById('winner-text');
-const newGameBtn = document.getElementById('new-game-btn');
-const resetGameBtn = document.getElementById('reset-game-btn');
-const endGameBtn = document.getElementById('end-game-btn');
+    load() {
+        const savedAccounts = localStorage.getItem('boardgame_hub_accounts');
+        const savedActive = localStorage.getItem('boardgame_hub_active_user');
+        
+        if (savedAccounts) {
+            try { this.accounts = JSON.parse(savedAccounts); } catch(e) { this.accounts = []; }
+        }
+        if (savedActive) {
+            this.activeUsername = savedActive;
+        }
+    }
 
-// SOS DOM References
-const sosSetupPanel = document.getElementById('sos-setup-panel');
-const sosGamePanel = document.getElementById('sos-game-panel');
-const sosGridContainer = document.getElementById('sos-grid-container');
-const sosStatusP1 = document.getElementById('sos-status-p1');
-const sosStatusP2 = document.getElementById('sos-status-p2');
-const sosTurnBadge = document.getElementById('sos-turn-badge');
-const sosBtnS = document.getElementById('sos-btn-s');
-const sosBtnO = document.getElementById('sos-btn-o');
-const sosResetBtn = document.getElementById('sos-reset-btn');
-const sosEndBtn = document.getElementById('sos-end-btn');
-const sosStartBtn = document.getElementById('sos-start-btn');
-const logoBackToHub = document.getElementById('logo-back-to-hub');
-const ludoSetupBackBtn = document.getElementById('ludo-setup-back-btn');
-const sosSetupBackBtn = document.getElementById('sos-setup-back-btn');
+    save() {
+        localStorage.setItem('boardgame_hub_accounts', JSON.stringify(this.accounts));
+        localStorage.setItem('boardgame_hub_active_user', this.activeUsername);
+        this.updateProfileUI();
+    }
 
-// Profile & Navigation State
-let accounts = [];
-let activeUsername = "";
+    getActiveAccount() {
+        return this.accounts.find(a => a.username === this.activeUsername);
+    }
 
-function loadProfileStats() {
-    const savedAccounts = localStorage.getItem('boardgame_hub_accounts');
-    const savedActive = localStorage.getItem('boardgame_hub_active_user');
-    
-    if (savedAccounts) {
+    createProfile(username, avatar, color) {
+        let profile = this.accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+        if (!profile) {
+            profile = { username, avatar, color, played: 0, wins: 0 };
+            this.accounts.push(profile);
+        } else {
+            profile.avatar = avatar;
+            profile.color = color;
+        }
+        this.activeUsername = profile.username;
+        this.save();
+    }
+
+    deleteProfile(username) {
+        this.accounts = this.accounts.filter(a => a.username !== username);
+        if (this.activeUsername === username && this.accounts.length > 0) {
+            this.activeUsername = this.accounts[0].username;
+        }
+        this.save();
+    }
+
+    updateProfileUI() {
+        const account = this.getActiveAccount();
+        if (!account) return;
+        
+        document.getElementById('profile-name').innerText = account.username;
+        const avatarDisplay = document.getElementById('profile-avatar-display');
+        avatarDisplay.className = `profile-avatar theme-${account.color}`;
+        avatarDisplay.innerHTML = `<i class="fa-solid ${account.avatar}"></i>`;
+        
+        document.getElementById('stats-played').innerText = account.played;
+        document.getElementById('stats-wins').innerText = account.wins;
+        const ratio = account.played > 0 ? Math.round((account.wins / account.played) * 100) : 0;
+        document.getElementById('stats-ratio').innerText = ratio + '%';
+    }
+}
+
+// ==========================================
+// 4. FIREBASE MULTIPLAYER MANAGER
+// ==========================================
+class FirebaseManager {
+    constructor() {
+        this.app = null;
+        this.db = null;
+        this.config = null;
+        this.roomRef = null;
+        
+        this.roomCode = null;
+        this.myPlayerKey = null; // 'player1'..'player4'
+        this.isMultiplayerActive = false;
+        this.gameName = null; // 'ludo' or 'sos'
+        
+        this.onRoomStateChanged = null;
+        this.onPlayersChanged = null;
+    }
+
+    loadConfig() {
+        const saved = localStorage.getItem('boardgame_hub_firebase_config');
+        if (saved) {
+            try {
+                this.config = JSON.parse(saved);
+                this.initializeFirebase();
+            } catch(e) {
+                console.error("Firebase saved config load failed", e);
+            }
+        }
+    }
+
+    saveConfig(configStr) {
         try {
-            accounts = JSON.parse(savedAccounts);
+            const config = JSON.parse(configStr);
+            localStorage.setItem('boardgame_hub_firebase_config', JSON.stringify(config));
+            this.config = config;
+            this.initializeFirebase();
+            return true;
         } catch(e) {
-            accounts = [];
+            alert("Geçersiz JSON formatı!");
+            return false;
+        }
+    }
+
+    initializeFirebase() {
+        if (!this.config) return;
+        try {
+            // Check if already initialized to avoid re-init error
+            if (firebase.apps.length === 0) {
+                this.app = firebase.initializeApp(this.config);
+            } else {
+                this.app = firebase.app();
+            }
+            this.db = firebase.database();
+        } catch(e) {
+            console.error("Firebase Init Error", e);
+        }
+    }
+
+    isConfigured() {
+        return !!this.db;
+    }
+
+    generateRoomCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    }
+
+    async createRoom(gameName, hostAccount) {
+        if (!this.isConfigured()) {
+            alert("Firebase yapılandırılmamış!");
+            return null;
+        }
+        this.roomCode = this.generateRoomCode();
+        this.gameName = gameName;
+        this.myPlayerKey = 'player1';
+        this.isMultiplayerActive = true;
+        
+        this.roomRef = this.db.ref(`rooms/${this.roomCode}`);
+        
+        const hostPlayerObj = {
+            username: hostAccount.username,
+            avatar: hostAccount.avatar,
+            color: hostAccount.color,
+            playerKey: 'player1'
+        };
+
+        await this.roomRef.set({
+            gameName: gameName,
+            status: 'lobby',
+            players: {
+                player1: hostPlayerObj
+            },
+            state: null
+        });
+
+        this.listenToRoom();
+        return this.roomCode;
+    }
+
+    async joinRoom(roomCode, gameName, guestAccount) {
+        if (!this.isConfigured()) {
+            alert("Firebase yapılandırılmamış!");
+            return null;
+        }
+        const cleanedCode = roomCode.trim().toUpperCase();
+        this.roomRef = this.db.ref(`rooms/${cleanedCode}`);
+        
+        const snapshot = await this.roomRef.once('value');
+        const roomData = snapshot.val();
+        if (!roomData) {
+            alert("Oda bulunamadı!");
+            return null;
+        }
+        if (roomData.gameName !== gameName) {
+            alert(`Bu oda ${roomData.gameName === 'ludo' ? 'Kızma Birader' : 'SOS'} oyunu için açılmış!`);
+            return null;
+        }
+        if (roomData.status !== 'lobby') {
+            alert("Oyun çoktan başlamış!");
+            return null;
+        }
+
+        const maxPlayers = gameName === 'ludo' ? 4 : 2;
+        const currentPlayers = roomData.players || {};
+        const playerKeys = Object.keys(currentPlayers);
+        
+        if (playerKeys.length >= maxPlayers) {
+            alert("Oda dolu!");
+            return null;
+        }
+
+        // Determine next slot
+        let myKey = null;
+        for (let i = 1; i <= maxPlayers; i++) {
+            if (!currentPlayers[`player${i}`]) {
+                myKey = `player${i}`;
+                break;
+            }
+        }
+
+        if (!myKey) {
+            alert("Oda dolu!");
+            return null;
+        }
+
+        this.roomCode = cleanedCode;
+        this.gameName = gameName;
+        this.myPlayerKey = myKey;
+        this.isMultiplayerActive = true;
+
+        const guestPlayerObj = {
+            username: guestAccount.username,
+            avatar: guestAccount.avatar,
+            color: guestAccount.color,
+            playerKey: myKey
+        };
+
+        await this.roomRef.child('players').child(myKey).set(guestPlayerObj);
+        
+        this.listenToRoom();
+        return this.roomCode;
+    }
+
+    disconnect() {
+        if (this.roomRef) {
+            if (this.myPlayerKey) {
+                // Remove player from database
+                this.roomRef.child('players').child(this.myPlayerKey).remove();
+            }
+            this.roomRef.off();
+        }
+        this.roomCode = null;
+        this.myPlayerKey = null;
+        this.isMultiplayerActive = false;
+        this.roomRef = null;
+    }
+
+    listenToRoom() {
+        if (!this.roomRef) return;
+        
+        // Listen players list
+        this.roomRef.child('players').on('value', (snapshot) => {
+            const players = snapshot.val() || {};
+            if (this.onPlayersChanged) this.onPlayersChanged(players);
+        });
+
+        // Listen game status / state updates
+        this.roomRef.on('value', (snapshot) => {
+            const roomVal = snapshot.val();
+            if (roomVal && this.onRoomStateChanged) {
+                this.onRoomStateChanged(roomVal);
+            }
+        });
+    }
+
+    updateGameState(state) {
+        if (this.roomRef && this.myPlayerKey === 'player1') {
+            this.roomRef.child('state').set(state);
         }
     }
     
-    if (savedActive) {
-        activeUsername = savedActive;
-    }
-    
-    if (accounts.length === 0) {
-        // Force account creation on startup if none exists
-        showPanel('profile-setup-panel');
-        regCancelBtn.classList.add('hidden');
-    } else {
-        // Fallback active user if active user is missing or invalid
-        if (!activeUsername || !accounts.find(a => a.username === activeUsername)) {
-            activeUsername = accounts[0].username;
+    // Allow non-hosts to also post their turn updates
+    updatePlayerStateDirect(state) {
+        if (this.roomRef) {
+            this.roomRef.child('state').set(state);
         }
-        showPanel('hub-panel');
-        updateProfileUI();
     }
 }
 
-function saveProfileStats() {
-    localStorage.setItem('boardgame_hub_accounts', JSON.stringify(accounts));
-    localStorage.setItem('boardgame_hub_active_user', activeUsername);
-    updateProfileUI();
-}
-
-function updateProfileUI() {
-    const currentAccount = accounts.find(a => a.username === activeUsername);
-    if (!currentAccount) return;
-    
-    // Update name
-    profileName.innerText = currentAccount.username;
-    
-    // Update avatar and color
-    profileAvatarDisplay.className = `profile-avatar theme-${currentAccount.color}`;
-    profileAvatarDisplay.innerHTML = `<i class="fa-solid ${currentAccount.avatar}"></i>`;
-    
-    // Update stats
-    document.getElementById('stats-played').innerText = currentAccount.played;
-    document.getElementById('stats-wins').innerText = currentAccount.wins;
-    const ratio = currentAccount.played > 0 ? Math.round((currentAccount.wins / currentAccount.played) * 100) : 0;
-    document.getElementById('stats-ratio').innerText = ratio + '%';
-}
-
-function showPanel(panelId) {
-    const panels = ['hub-panel', 'setup-panel', 'sos-setup-panel', 'game-panel', 'sos-game-panel', 'profile-setup-panel', 'multiplayer-lobby-panel'];
-    panels.forEach(p => {
-        const el = document.getElementById(p);
-        if (el) {
-            if (p === panelId) el.classList.remove('hidden');
-            else el.classList.add('hidden');
-        }
-    });
-}
-
-// Logo Click -> Go back to Lobby
-logoBackToHub.addEventListener('click', () => {
-    winnerModal.classList.add('hidden');
-    disconnectFromRoom();
-    showPanel('hub-panel');
-});
-
-// Setup back buttons
-ludoSetupBackBtn.addEventListener('click', () => {
-    showPanel('hub-panel');
-});
-
-sosSetupBackBtn.addEventListener('click', () => {
-    showPanel('hub-panel');
-});
-
-// Start Ludo Game Handler
-document.getElementById('start-game-btn').addEventListener('click', () => {
-    let activeColors = [];
-    COLORS.forEach(color => {
-        const type = document.querySelector(`input[name="player-${color}"]:checked`).value;
-        gameState.players[color] = { type: type, finished: 0 };
-        if (type !== 'none') {
-            activeColors.push(color);
-        }
-    });
-
-    if (activeColors.length < 2) {
-        alert("En az 2 aktif oyuncu seçmelisiniz!");
-        return;
+// ==========================================
+// 5. NAVIGATION MANAGER (SPA Panels Control)
+// ==========================================
+class NavigationManager {
+    constructor(appRef) {
+        this.app = appRef;
+        this.RULES_CONTENT = {
+            hub: `
+                <h3>Masa Oyunu Platformu</h3>
+                <p>Klasik oyunlar arasından seçim yapıp oynayabilirsiniz:</p>
+                <ul>
+                    <li><strong>Kızma Birader (Ludo):</strong> 2-4 oyunculu şans ve strateji.</li>
+                    <li><strong>SOS Oyunu:</strong> Puan toplama ve harf eşleme stratejisi.</li>
+                </ul>
+            `,
+            ludo: `
+                <h3>Kızma Birader Kuralları</h3>
+                <p>4 piyonun tamamını tam tur döndürerek hedef (ev) alanına ulaştıran ilk oyuncu olun.</p>
+                <ul>
+                    <li>Kaleden çıkabilmek için zarda <strong>6</strong> atmalısınız.</li>
+                    <li>Her 6 attığınızda <strong>ekstra bir zar atma</strong> hakkı kazanırsınız.</li>
+                    <li>Eğer hareketiniz rakip piyonun bulunduğu karede biterse piyonu **kırıp** kalesine yollarsınız.</li>
+                    <li>Güvenli bölgelerde piyonlar kırılamaz.</li>
+                </ul>
+            `,
+            sos: `
+                <h3>SOS Oyun Kuralları</h3>
+                <p>Boş hücrelere sırayla <strong>S</strong> veya <strong>O</strong> harfi yerleştirin.</p>
+                <ul>
+                    <li>Yatay, dikey ya da çapraz olarak <strong>S-O-S</strong> dizen 1 puan kazanır.</li>
+                    <li>SOS yapan oyuncu **ekstra bir hamle** hakkı kazanır.</li>
+                    <li>Tahta tamamen dolduğunda en çok puana sahip olan oyunu kazanır.</li>
+                </ul>
+            `
+        };
     }
 
-    gameState.activePlayers = activeColors;
-    gameState.currentTurnIndex = 0;
-    
-    COLORS.forEach(color => {
-        gameState.tokens[color] = Array.from({ length: 4 }, (_, i) => ({
-            id: i,
-            posType: 'base',
-            posIndex: i
-        }));
-    });
+    showPanel(panelId) {
+        const panels = ['hub-panel', 'setup-panel', 'sos-setup-panel', 'game-panel', 'sos-game-panel', 'profile-setup-panel', 'multiplayer-lobby-panel'];
+        panels.forEach(p => {
+            const el = document.getElementById(p);
+            if (el) {
+                if (p === panelId) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            }
+        });
+    }
 
-    saveGameState();
-    showPanel('game-panel');
+    openRules() {
+        const rulesBody = document.getElementById('rules-modal-body');
+        const gamePanel = document.getElementById('game-panel');
+        const sosGamePanel = document.getElementById('sos-game-panel');
+        
+        if (!gamePanel.classList.contains('hidden')) {
+            rulesBody.innerHTML = this.RULES_CONTENT.ludo;
+        } else if (!sosGamePanel.classList.contains('hidden')) {
+            rulesBody.innerHTML = this.RULES_CONTENT.sos;
+        } else {
+            rulesBody.innerHTML = this.RULES_CONTENT.hub;
+        }
+        document.getElementById('rules-modal').classList.remove('hidden');
+    }
 
-    buildBoardUI();
-    updateUI();
-    logMessage("Oyun başladı! Sıra " + COLOR_NAMES[getCurrentPlayerColor()] + " oyuncusunda.", getCurrentPlayerColor());
-    checkAndTriggerAI();
-});
+    closeRules() {
+        document.getElementById('rules-modal').classList.add('hidden');
+    }
 
-// Restart / End Ludo Game Handlers
-resetGameBtn.addEventListener('click', resetCurrentGame);
-endGameBtn.addEventListener('click', endGame);
-newGameBtn.addEventListener('click', () => {
-    winnerModal.classList.add('hidden');
-    showPanel('hub-panel');
-});
-
-function endGame() {
-    winnerModal.classList.add('hidden');
-    showPanel('hub-panel');
-    sessionStorage.removeItem('kizmabirader_state');
+    toggleTheme() {
+        const curTheme = document.body.getAttribute('data-theme') || 'dark';
+        const nextTheme = curTheme === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', nextTheme);
+        const icon = document.getElementById('theme-btn').querySelector('i');
+        icon.className = nextTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+    }
 }
 
-function resetCurrentGame() {
-    if (!confirm("Oyunu mevcut oyuncularla yeniden başlatmak istediğinize emin misiniz?")) return;
-    
-    COLORS.forEach(color => {
-        gameState.tokens[color] = Array.from({ length: 4 }, (_, i) => ({
-            id: i,
-            posType: 'base',
-            posIndex: i
-        }));
-    });
+// ==========================================
+// 6. LUDO GAME ENGINE
+// ==========================================
+class LudoEngine {
+    constructor(appRef) {
+        this.app = appRef;
+        this.state = {
+            players: {}, // color -> { type: 'human'|'ai'|'none', finished: 0, username: '' }
+            activePlayers: [], // colors
+            currentTurnIndex: 0,
+            diceVal: null,
+            hasRolled: false,
+            extraTurn: false,
+            tokens: {} // color -> 4 tokens
+        };
+    }
 
-    gameState.currentTurnIndex = 0;
-    gameState.diceVal = null;
-    gameState.hasRolled = false;
-    gameState.extraTurn = false;
-    
-    gameLog.innerHTML = '<div class="log-entry system"><i class="fa-solid fa-circle-info"></i> Oyun yeniden başlatıldı.</div>';
-    
-    saveGameState();
-    updateUI();
-    checkAndTriggerAI();
-}
+    init() {
+        this.buildBoardUI();
+    }
 
-// Build Board layout cells
-function buildBoardUI() {
-    ludoBoard.innerHTML = '';
-    
-    // Generate 15x15 grid structures
-    for (let r = 0; r < 15; r++) {
-        for (let c = 0; c < 15; c++) {
-            // Check if cell matches bases
-            if (r < 6 && c < 6) continue; // Skip to place large base element
-            if (r < 6 && c >= 9) continue;
-            if (r >= 9 && c < 6) continue;
-            if (r >= 9 && c >= 9) continue;
-            if (r >= 6 && r <= 8 && c >= 6 && c <= 8) continue; // Center zone skip
-            
-            // Regular cells
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.dataset.row = r;
-            cell.dataset.col = c;
-            
-            // Check safe zones
-            const trackIdx = TRACK_COORDS.findIndex(coord => coord.r === r && coord.c === c);
-            if (trackIdx !== -1) {
-                if (SAFE_INDICES.includes(trackIdx)) {
-                    cell.classList.add('safe-zone');
+    buildBoardUI() {
+        const board = document.getElementById('ludo-board');
+        board.innerHTML = '';
+
+        for (let r = 0; r < 15; r++) {
+            for (let c = 0; c < 15; c++) {
+                if (r < 6 && c < 6) continue;
+                if (r < 6 && c >= 9) continue;
+                if (r >= 9 && c < 6) continue;
+                if (r >= 9 && c >= 9) continue;
+                if (r >= 6 && r <= 8 && c >= 6 && c <= 8) continue;
+                
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+                
+                const trackIdx = TRACK_COORDS.findIndex(coord => coord.r === r && coord.c === c);
+                if (trackIdx !== -1) {
+                    if (SAFE_INDICES.includes(trackIdx)) {
+                        cell.classList.add('safe-zone');
+                    }
+                    if (r === 6 && c === 1) cell.classList.add('red-start');
+                    else if (r === 1 && c === 8) cell.classList.add('blue-start');
+                    else if (r === 8 && c === 13) cell.classList.add('green-start');
+                    else if (r === 13 && c === 6) cell.classList.add('yellow-start');
                 }
                 
-                // Color start cells
-                if (r === 6 && c === 1) cell.classList.add('red-start');
-                else if (r === 1 && c === 8) cell.classList.add('blue-start');
-                else if (r === 8 && c === 13) cell.classList.add('green-start');
-                else if (r === 13 && c === 6) cell.classList.add('yellow-start');
-            }
-            
-            // Color home path cells (4 solid colored slots, 5th next to center is white)
-            COLORS.forEach(color => {
-                const homeIdx = COLOR_CONFIGS[color].homePath.findIndex(coord => coord.r === r && coord.c === c);
-                if (homeIdx !== -1) {
-                    if (homeIdx < 4) {
+                COLORS.forEach(color => {
+                    const homeIdx = COLOR_CONFIGS[color].homePath.findIndex(coord => coord.r === r && coord.c === c);
+                    if (homeIdx !== -1 && homeIdx < 4) {
                         cell.classList.add(`${color}-home`);
                     }
+                });
+                
+                board.appendChild(cell);
+            }
+        }
+
+        this.appendBaseZone('red', 1, 1);
+        this.appendBaseZone('blue', 1, 10);
+        this.appendBaseZone('yellow', 10, 1);
+        this.appendBaseZone('green', 10, 10);
+
+        const center = document.createElement('div');
+        center.className = 'center-zone';
+        center.style.gridColumn = '7 / span 3';
+        center.style.gridRow = '7 / span 3';
+        center.innerHTML = `
+            <svg viewBox="0 0 120 120" style="width: 100%; height: 100%; display: block;">
+                <polygon points="0,0 120,0 60,60" fill="var(--color-blue)" />
+                <polygon points="120,0 120,120 60,60" fill="var(--color-green)" />
+                <polygon points="0,120 120,120 60,60" fill="var(--color-yellow)" />
+                <polygon points="0,0 0,120 60,60" fill="var(--color-red)" />
+                <line x1="0" y1="0" x2="120" y2="120" stroke="#1a1a1a" stroke-width="2.5" />
+                <line x1="120" y1="0" x2="0" y2="120" stroke="#1a1a1a" stroke-width="2.5" />
+                <rect x="0" y="0" width="120" height="120" fill="none" stroke="#1a1a1a" stroke-width="3" />
+            </svg>
+        `;
+        board.appendChild(center);
+    }
+
+    appendBaseZone(color, r, c) {
+        const base = document.createElement('div');
+        base.className = `base-zone base-${color}`;
+        base.style.gridColumn = `${c} / span 6`;
+        base.style.gridRow = `${r} / span 6`;
+        
+        for (let i = 0; i < 4; i++) {
+            const pocket = document.createElement('div');
+            pocket.className = 'pocket';
+            pocket.dataset.pocketColor = color;
+            pocket.dataset.pocketIndex = i;
+            base.appendChild(pocket);
+        }
+        document.getElementById('ludo-board').appendChild(base);
+    }
+
+    startLocalGame(playersConfig) {
+        this.state = {
+            players: playersConfig,
+            activePlayers: Object.keys(playersConfig).filter(c => playersConfig[c].type !== 'none'),
+            currentTurnIndex: 0,
+            diceVal: null,
+            hasRolled: false,
+            extraTurn: false,
+            tokens: {}
+        };
+
+        COLORS.forEach(color => {
+            this.state.tokens[color] = Array.from({ length: 4 }, (_, i) => ({
+                id: i,
+                posType: 'base',
+                posIndex: i
+            }));
+        });
+
+        this.saveLocalBackup();
+        this.render();
+        this.logMessage("Lokal oyun başladı! Sıra: " + COLOR_NAMES[this.getCurrentPlayerColor()], this.getCurrentPlayerColor());
+        this.checkAndTriggerAI();
+    }
+
+    startOnlineGame(initialOnlineState) {
+        this.state = initialOnlineState;
+        this.render();
+        this.logMessage("Çevrimiçi oyun başladı! Sıra: " + COLOR_NAMES[this.getCurrentPlayerColor()], this.getCurrentPlayerColor());
+        this.checkAndTriggerAI();
+    }
+
+    saveLocalBackup() {
+        if (!this.app.firebase.isMultiplayerActive) {
+            sessionStorage.setItem('kizmabirader_state', JSON.stringify(this.state));
+        }
+    }
+
+    getCurrentPlayerColor() {
+        return this.state.activePlayers[this.state.currentTurnIndex] || null;
+    }
+
+    isMyTurn() {
+        if (!this.app.firebase.isMultiplayerActive) return true;
+        const color = this.getCurrentPlayerColor();
+        const pObj = this.state.players[color];
+        return pObj && pObj.playerKey === this.app.firebase.myPlayerKey;
+    }
+
+    rollDice() {
+        if (this.app.firebase.isMultiplayerActive && !this.isMyTurn()) {
+            return;
+        }
+        if (this.state.hasRolled) return;
+
+        this.app.sounds.playRoll();
+        const diceBtn = document.getElementById('roll-dice-btn');
+        const dice3D = document.getElementById('dice-3d');
+        
+        diceBtn.disabled = true;
+        dice3D.className = 'dice rolling';
+
+        setTimeout(() => {
+            dice3D.classList.remove('rolling');
+            const roll = Math.floor(Math.random() * 6) + 1;
+            this.state.diceVal = roll;
+            this.state.hasRolled = true;
+
+            this.setDiceFace(roll);
+            const badge = document.getElementById('roll-result-badge');
+            badge.innerText = roll;
+            badge.classList.remove('hidden');
+
+            const color = this.getCurrentPlayerColor();
+            this.logMessage(`${COLOR_NAMES[color]} ${roll} attı!`, color);
+
+            const playable = this.state.tokens[color].filter(t => this.isPlayableToken(color, t));
+            
+            if (roll === 6) this.state.extraTurn = true;
+            else this.state.extraTurn = false;
+
+            if (playable.length === 0) {
+                this.logMessage("Yapılabilecek hamle yok.", color);
+                setTimeout(() => this.nextTurn(), 1000);
+            } else {
+                this.render();
+                if (this.state.players[color].type === 'ai') {
+                    // Host client coordinates local AI decision even in online lobby
+                    if (!this.app.firebase.isMultiplayerActive || this.app.firebase.myPlayerKey === 'player1') {
+                        setTimeout(() => this.makeAIMove(playable), 1000);
+                    }
+                }
+            }
+
+            this.syncState();
+        }, 600);
+    }
+
+    setDiceFace(val) {
+        const dice3D = document.getElementById('dice-3d');
+        let x = 0, y = 0;
+        switch(val) {
+            case 1: x = 0; y = 0; break;
+            case 6: x = 0; y = 180; break;
+            case 3: x = 0; y = -90; break;
+            case 4: x = 0; y = 90; break;
+            case 2: x = -90; y = 0; break;
+            case 5: x = 90; y = 0; break;
+        }
+        dice3D.style.transform = `rotateX(${x}deg) rotateY(${y}deg)`;
+    }
+
+    isPlayableToken(color, token) {
+        if (color !== this.getCurrentPlayerColor()) return false;
+        if (!this.state.hasRolled || this.state.diceVal === null) return false;
+        
+        const val = this.state.diceVal;
+        if (token.posType === 'base') return val === 6;
+        if (token.posType === 'track') return true;
+        if (token.posType === 'homePath') return token.posIndex + val <= 4;
+        return false;
+    }
+
+    handleTokenMove(color, tokenId) {
+        if (this.app.firebase.isMultiplayerActive && !this.isMyTurn()) return;
+        const token = this.state.tokens[color].find(t => t.id === tokenId);
+        if (!token || !this.isPlayableToken(color, token)) return;
+
+        this.app.sounds.playMove();
+        const val = this.state.diceVal;
+
+        if (token.posType === 'base') {
+            token.posType = 'track';
+            token.posIndex = COLOR_CONFIGS[color].startIndex;
+            this.logMessage(`${COLOR_NAMES[color]} kaleden çıktı!`, color);
+        } else if (token.posType === 'track') {
+            const next = this.getNextTrackPosition(color, token.posIndex, val);
+            if (next.type === 'track') {
+                token.posIndex = next.index;
+                this.checkCaptures(color, token.posIndex);
+            } else if (next.type === 'homePath') {
+                token.posType = 'homePath';
+                token.posIndex = next.index;
+            } else if (next.type === 'finished') {
+                token.posType = 'finished';
+                this.app.sounds.playHome();
+                this.logMessage(`${COLOR_NAMES[color]} piyonunu hedefe ulaştırdı! 🎉`, color);
+            }
+        } else if (token.posType === 'homePath') {
+            if (token.posIndex + val === 4) {
+                token.posType = 'finished';
+                this.app.sounds.playHome();
+                this.logMessage(`${COLOR_NAMES[color]} piyonunu hedefe ulaştırdı! 🎉`, color);
+            } else {
+                token.posIndex += val;
+            }
+        }
+
+        this.state.hasRolled = false;
+        this.state.diceVal = null;
+        document.getElementById('roll-result-badge').classList.add('hidden');
+
+        if (this.checkWinCondition(color)) {
+            this.handleWin(color);
+            return;
+        }
+
+        this.render();
+
+        if (this.state.extraTurn) {
+            this.logMessage(`${COLOR_NAMES[color]} 6 attığı için tekrar oynuyor!`, color);
+            this.state.extraTurn = false;
+            this.syncState();
+            this.checkAndTriggerAI();
+        } else {
+            this.nextTurn();
+        }
+    }
+
+    getNextTrackPosition(color, curr, steps) {
+        const config = COLOR_CONFIGS[color];
+        let remaining = steps;
+        let index = curr;
+
+        while (remaining > 0) {
+            if (index === config.endIndex) {
+                remaining--;
+                if (remaining === 4) return { type: 'finished' };
+                else if (remaining < 4) return { type: 'homePath', index: remaining };
+                else return { type: 'track', index: curr }; // bounce or wait standard
+            }
+            index = (index + 1) % 52;
+            remaining--;
+        }
+        return { type: 'track', index: index };
+    }
+
+    checkCaptures(myColor, trackIndex) {
+        if (SAFE_INDICES.includes(trackIndex)) return;
+        COLORS.forEach(opp => {
+            if (opp === myColor) return;
+            this.state.tokens[opp].forEach(t => {
+                if (t.posType === 'track' && t.posIndex === trackIndex) {
+                    t.posType = 'base';
+                    t.posIndex = t.id;
+                    this.app.sounds.playCapture();
+                    this.logMessage(`${COLOR_NAMES[myColor]} oyuncusu, ${COLOR_NAMES[opp]} piyonunu kırdı! 💥`, myColor);
                 }
             });
-            
-            ludoBoard.appendChild(cell);
-        }
-    }
-
-    // Append 4 Base Zones
-    appendBaseZone('red', 1, 1);
-    appendBaseZone('blue', 1, 10);
-    appendBaseZone('yellow', 10, 1);
-    appendBaseZone('green', 10, 10);
-
-    // Append Center Zone
-    const center = document.createElement('div');
-    center.className = 'center-zone';
-    center.style.gridColumn = '7 / span 3';
-    center.style.gridRow = '7 / span 3';
-    
-    // Create responsive SVG for center triangles meeting perfectly at the center point
-    center.innerHTML = `
-        <svg viewBox="0 0 120 120" style="width: 100%; height: 100%; display: block;">
-            <!-- Top Triangle (Blue) -->
-            <polygon points="0,0 120,0 60,60" fill="var(--color-blue)" />
-            <!-- Right Triangle (Green) -->
-            <polygon points="120,0 120,120 60,60" fill="var(--color-green)" />
-            <!-- Bottom Triangle (Yellow) -->
-            <polygon points="0,120 120,120 60,60" fill="var(--color-yellow)" />
-            <!-- Left Triangle (Red) -->
-            <polygon points="0,0 0,120 60,60" fill="var(--color-red)" />
-            
-            <!-- Diagonal Dividers -->
-            <line x1="0" y1="0" x2="120" y2="120" stroke="#1a1a1a" stroke-width="2.5" />
-            <line x1="120" y1="0" x2="0" y2="120" stroke="#1a1a1a" stroke-width="2.5" />
-            <!-- Outer Border -->
-            <rect x="0" y="0" width="120" height="120" fill="none" stroke="#1a1a1a" stroke-width="3" />
-        </svg>
-    `;
-    
-    ludoBoard.appendChild(center);
-}
-
-function appendBaseZone(color, startRow, startCol) {
-    const base = document.createElement('div');
-    base.className = `base-zone base-${color}`;
-    base.style.gridColumn = `${startCol} / span 6`;
-    base.style.gridRow = `${startRow} / span 6`;
-    
-    // 4 pockets inside base
-    for (let i = 0; i < 4; i++) {
-        const pocket = document.createElement('div');
-        pocket.className = 'pocket';
-        pocket.dataset.pocketColor = color;
-        pocket.dataset.pocketIndex = i;
-        base.appendChild(pocket);
-    }
-    ludoBoard.appendChild(base);
-}
-
-// Render Tokens on the Board
-function renderTokens() {
-    // Clear all token containers/tokens first
-    document.querySelectorAll('.token-container').forEach(el => el.remove());
-    document.querySelectorAll('.token').forEach(el => el.remove());
-
-    // Map of coordinate key "r,c" -> list of tokens
-    const placementMap = {};
-
-    COLORS.forEach(color => {
-        if (gameState.players[color].type === 'none') return;
-
-        gameState.tokens[color].forEach(token => {
-            let coords = null;
-            if (token.posType === 'base') {
-                coords = COLOR_CONFIGS[color].basePockets[token.posIndex];
-            } else if (token.posType === 'track') {
-                coords = TRACK_COORDS[token.posIndex];
-            } else if (token.posType === 'homePath') {
-                coords = COLOR_CONFIGS[color].homePath[token.posIndex];
-            }
-            
-            if (coords) {
-                const key = `${coords.r},${coords.c}`;
-                if (!placementMap[key]) {
-                    placementMap[key] = [];
-                }
-                placementMap[key].push({ color, token });
-            }
         });
-    });
+    }
 
-    // Render tokens onto cells
-    Object.keys(placementMap).forEach(key => {
-        const [r, c] = key.split(',').map(Number);
-        const tokensInCell = placementMap[key];
+    nextTurn() {
+        this.state.hasRolled = false;
+        this.state.diceVal = null;
+        this.state.currentTurnIndex = (this.state.currentTurnIndex + 1) % this.state.activePlayers.length;
         
-        let container = null;
-        if (tokensInCell.length > 1) {
-            container = document.createElement('div');
-            container.className = 'token-container multiple';
-        }
+        document.getElementById('roll-result-badge').classList.add('hidden');
+        this.syncState();
+        this.checkAndTriggerAI();
+    }
 
-        tokensInCell.forEach(({ color, token }) => {
-            const tokenEl = document.createElement('div');
-            tokenEl.className = `token token-${color}`;
-            tokenEl.dataset.color = color;
-            tokenEl.dataset.tokenId = token.id;
-            tokenEl.innerText = token.id + 1;
-
-            // Make playable highlight if turn fits
-            if (isPlayableToken(color, token)) {
-                tokenEl.classList.add('playable');
-                tokenEl.addEventListener('click', () => handleTokenMove(color, token.id));
+    checkAndTriggerAI() {
+        const color = this.getCurrentPlayerColor();
+        if (!color || !this.state.players[color]) return;
+        
+        const isAI = this.state.players[color].type === 'ai';
+        const diceBtn = document.getElementById('roll-dice-btn');
+        
+        if (isAI) {
+            diceBtn.disabled = true;
+            // Online mode: only host performs AI roll calculations
+            if (!this.app.firebase.isMultiplayerActive || this.app.firebase.myPlayerKey === 'player1') {
+                setTimeout(() => this.rollDice(), 1200);
             }
-
-            if (container) {
-                container.appendChild(tokenEl);
-            } else {
-                // Find single cell
-                const cell = findCell(r, c);
-                if (cell) {
-                    cell.appendChild(tokenEl);
-                }
-            }
-        });
-
-        if (container) {
-            const cell = findCell(r, c);
-            if (cell) {
-                cell.appendChild(container);
-            }
-        }
-    });
-}
-
-function findCell(r, c) {
-    // Check inside pocket bases first
-    const pockets = document.querySelectorAll('.pocket');
-    for (let pocket of pockets) {
-        const color = pocket.dataset.pocketColor;
-        const idx = Number(pocket.dataset.pocketIndex);
-        const configCoords = COLOR_CONFIGS[color].basePockets[idx];
-        if (configCoords.r === r && configCoords.c === c) {
-            return pocket;
-        }
-    }
-
-    // Grid cells
-    return document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-}
-
-// Rules engine: can token move?
-function isPlayableToken(color, token) {
-    if (color !== getCurrentPlayerColor()) return false;
-    if (!gameState.hasRolled) return false;
-    if (gameState.diceVal === null) return false;
-    
-    // AI has its own decision path, but visually mark AI moves if debug
-    const playerType = gameState.players[color] ? gameState.players[color].type : 'none';
-    
-    const val = gameState.diceVal;
-
-    if (token.posType === 'base') {
-        return val === 6; // Must roll 6 to exit base
-    }
-
-    if (token.posType === 'track') {
-        return true; // Can always move along path
-    }
-
-    if (token.posType === 'homePath') {
-        // Must roll exact value to land in home
-        return token.posIndex + val <= 4;
-    }
-
-    return false; // Finished tokens cannot move
-}
-
-function getCurrentPlayerColor() {
-    if (!gameState || !gameState.activePlayers || gameState.activePlayers.length === 0) return null;
-    return gameState.activePlayers[gameState.currentTurnIndex] || null;
-}
-
-function isMyTurn() {
-    if (!isMultiplayerActive) return true;
-    const activeColor = getCurrentPlayerColor();
-    if (!activeColor) return false;
-    const activePlayerObj = gameState.players[activeColor];
-    return activePlayerObj && activePlayerObj.playerKey === myPlayerKey;
-}
-
-// Dice Roll logic
-rollDiceBtn.addEventListener('click', rollDice);
-dice3D.addEventListener('click', () => {
-    const activeColor = getCurrentPlayerColor();
-    if (gameState.players[activeColor].type !== 'ai') {
-        rollDice();
-    }
-});
-
-function rollDice() {
-    if (isMultiplayerActive && !isMyTurn()) {
-        alert("Sıra sizde değil!");
-        return;
-    }
-    if (gameState.hasRolled) return;
-    
-    sounds.playRoll();
-    rollDiceBtn.disabled = true;
-    dice3D.className = 'dice rolling';
-
-    setTimeout(() => {
-        dice3D.classList.remove('rolling');
-        const roll = Math.floor(Math.random() * 6) + 1;
-        gameState.diceVal = roll;
-        gameState.hasRolled = true;
-        
-        // Show static face representation in 3D
-        setDiceFace(roll);
-        
-        rollResultBadge.innerText = roll;
-        rollResultBadge.classList.remove('hidden');
-
-        const activeColor = getCurrentPlayerColor();
-        if (!activeColor) return;
-
-        logMessage(`${COLOR_NAMES[activeColor] || activeColor} ${roll} attı!`, activeColor);
-
-        // Process options
-        const tokensForColor = gameState.tokens[activeColor] || [];
-        const playableTokens = tokensForColor.filter(t => isPlayableToken(activeColor, t));
-        
-        if (roll === 6) {
-            gameState.extraTurn = true;
         } else {
-            gameState.extraTurn = false;
-        }
-
-        if (playableTokens.length === 0) {
-            // No moves possible
-            logMessage("Yapılabilecek hamle yok.", activeColor);
-            setTimeout(nextTurn, 1000);
-        } else {
-            renderTokens();
-            // If AI, make decision automatically
-            const playerConfig = gameState.players[activeColor];
-            if (playerConfig && playerConfig.type === 'ai') {
-                setTimeout(() => makeAIMove(playableTokens), 1000);
-            }
-        }
-        
-        saveGameState();
-        if (isMultiplayerActive) {
-            currentRoomRef.child('state').set(gameState);
-        }
-    }, 600);
-}
-
-function setDiceFace(val) {
-    let x = 0, y = 0;
-    switch(val) {
-        case 1: x = 0; y = 0; break;
-        case 6: x = 0; y = 180; break;
-        case 3: x = 0; y = -90; break;
-        case 4: x = 0; y = 90; break;
-        case 2: x = -90; y = 0; break;
-        case 5: x = 90; y = 0; break;
-    }
-    dice3D.style.transform = `rotateX(${x}deg) rotateY(${y}deg)`;
-}
-
-// Token movement handling
-function handleTokenMove(color, tokenId) {
-    if (isMultiplayerActive && !isMyTurn()) {
-        alert("Sıra sizde değil!");
-        return;
-    }
-    const token = gameState.tokens[color].find(t => t.id === tokenId);
-    if (!token || !isPlayableToken(color, token)) return;
-
-    sounds.playMove();
-
-    const val = gameState.diceVal;
-    
-    if (token.posType === 'base') {
-        // Exit base
-        token.posType = 'track';
-        token.posIndex = COLOR_CONFIGS[color].startIndex;
-        logMessage(`${COLOR_NAMES[color]} kaleden çıktı!`, color);
-    } else if (token.posType === 'track') {
-        const nextPos = getNextTrackPosition(color, token.posIndex, val);
-        if (nextPos.type === 'track') {
-            token.posIndex = nextPos.index;
-            // Check capture
-            checkCaptures(color, token.posIndex);
-        } else if (nextPos.type === 'homePath') {
-            token.posType = 'homePath';
-            token.posIndex = nextPos.index;
-        } else if (nextPos.type === 'finished') {
-            token.posType = 'finished';
-            sounds.playHome();
-            logMessage(`${COLOR_NAMES[color]} piyonu hedefe ulaştırdı! 🎉`, color);
-        }
-    } else if (token.posType === 'homePath') {
-        if (token.posIndex + val === 4) {
-            token.posType = 'finished';
-            sounds.playHome();
-            logMessage(`${COLOR_NAMES[color]} piyonu hedefe ulaştırdı! 🎉`, color);
-        } else {
-            token.posIndex += val;
+            // Check if player has rolled
+            diceBtn.disabled = !this.isMyTurn() || this.state.hasRolled;
         }
     }
 
-    gameState.hasRolled = false;
-    gameState.diceVal = null;
-    rollResultBadge.classList.add('hidden');
+    makeAIMove(playable) {
+        let best = playable[0];
+        let maxScore = -1;
 
-    // Check Win
-    if (checkWinCondition(color)) {
-        handleWin(color);
-        return;
-    }
+        playable.forEach(t => {
+            let score = 0;
+            const val = this.state.diceVal;
 
-    renderTokens();
-    updateUI();
-
-    if (gameState.extraTurn) {
-        logMessage(`${COLOR_NAMES[color]} 6 attığı için tekrar oynuyor!`, color);
-        gameState.extraTurn = false; // reset flag
-        saveGameState();
-        checkAndTriggerAI();
-    } else {
-        nextTurn();
-    }
-}
-
-// Compute next steps clockwise
-function getNextTrackPosition(color, currentIndex, steps) {
-    const config = COLOR_CONFIGS[color];
-    let remaining = steps;
-    let curr = currentIndex;
-
-    while (remaining > 0) {
-        if (curr === config.endIndex) {
-            // Enter home stretch
-            remaining--;
-            if (remaining === 4) {
-                return { type: 'finished' };
-            } else if (remaining < 4) {
-                return { type: 'homePath', index: remaining };
-            } else {
-                // Cant enter home if overshoot (some variants allow bounce, but wait-until-exact is standard)
-                return { type: 'track', index: currentIndex }; // overshoot wait
-            }
-        }
-        
-        curr = (curr + 1) % 52;
-        remaining--;
-    }
-
-    return { type: 'track', index: curr };
-}
-
-// Capture opponent tokens
-function checkCaptures(myColor, trackIndex) {
-    // If safe zone, no capture
-    if (SAFE_INDICES.includes(trackIndex)) return;
-
-    COLORS.forEach(oppColor => {
-        if (oppColor === myColor) return;
-        
-        gameState.tokens[oppColor].forEach(oppToken => {
-            if (oppToken.posType === 'track' && oppToken.posIndex === trackIndex) {
-                // Send back to base!
-                oppToken.posType = 'base';
-                oppToken.posIndex = oppToken.id; // pocket index
-                sounds.playCapture();
-                logMessage(`${COLOR_NAMES[myColor]} oyuncusu, ${COLOR_NAMES[oppColor]} piyonunu kırdı! 💥`, myColor);
-            }
-        });
-    });
-}
-
-// Turn progression
-function nextTurn() {
-    gameState.hasRolled = false;
-    gameState.diceVal = null;
-    gameState.currentTurnIndex = (gameState.currentTurnIndex + 1) % gameState.activePlayers.length;
-    
-    rollResultBadge.classList.add('hidden');
-    saveGameState();
-    updateUI();
-    if (isMultiplayerActive) {
-        currentRoomRef.child('state').set(gameState);
-    }
-    
-    checkAndTriggerAI();
-}
-
-function checkAndTriggerAI() {
-    const activeColor = getCurrentPlayerColor();
-    if (!activeColor || !gameState.players[activeColor]) return;
-    if (gameState.players[activeColor].type === 'ai') {
-        rollDiceBtn.disabled = true;
-        // Delay AI roll to look natural
-        setTimeout(rollDice, 1200);
-    } else {
-        rollDiceBtn.disabled = false;
-    }
-}
-
-// Simple AI logic
-function makeAIMove(playableTokens) {
-    // AI priorities:
-    // 1. Capture opponents!
-    // 2. Safely enter home path or finish
-    // 3. Move token closest to home stretch
-    // 4. Release token from base if 6
-    
-    let bestToken = playableTokens[0];
-    let maxScore = -1;
-
-    playableTokens.forEach(t => {
-        let score = 0;
-        const val = gameState.diceVal;
-
-        if (t.posType === 'base' && val === 6) {
-            score = 50; // High priority to release base
-        } else if (t.posType === 'track') {
-            const nextPos = getNextTrackPosition(getCurrentPlayerColor(), t.posIndex, val);
-            
-            if (nextPos.type === 'track') {
-                // Will this capture someone?
-                if (!SAFE_INDICES.includes(nextPos.index)) {
-                    COLORS.forEach(oppColor => {
-                        if (oppColor === getCurrentPlayerColor()) return;
-                        gameState.tokens[oppColor].forEach(oppToken => {
-                            if (oppToken.posType === 'track' && oppToken.posIndex === nextPos.index) {
-                                score = 100; // Capturing is top priority!
-                            }
+            if (t.posType === 'base' && val === 6) {
+                score = 50;
+            } else if (t.posType === 'track') {
+                const next = this.getNextTrackPosition(this.getCurrentPlayerColor(), t.posIndex, val);
+                if (next.type === 'track') {
+                    if (!SAFE_INDICES.includes(next.index)) {
+                        COLORS.forEach(opp => {
+                            if (opp === this.getCurrentPlayerColor()) return;
+                            this.state.tokens[opp].forEach(oppT => {
+                                if (oppT.posType === 'track' && oppT.posIndex === next.index) {
+                                    score = 100; // Capture priority
+                                }
+                            });
                         });
-                    });
+                    }
+                    if (score < 100) {
+                        const dist = (COLOR_CONFIGS[this.getCurrentPlayerColor()].endIndex - next.index + 52) % 52;
+                        score = 40 - Math.floor(dist / 2);
+                    }
+                } else if (next.type === 'homePath' || next.type === 'finished') {
+                    score = 80;
                 }
-                
-                // Keep moving along track - favor tokens closer to end
-                if (score < 100) {
-                    const distToEnd = (COLOR_CONFIGS[getCurrentPlayerColor()].endIndex - nextPos.index + 52) % 52;
-                    score = 40 - Math.floor(distToEnd / 2);
-                }
-            } else if (nextPos.type === 'homePath' || nextPos.type === 'finished') {
-                score = 80; // Highly favor getting closer to or reaching home
+            } else if (t.posType === 'homePath') {
+                if (t.posIndex + val === 4) score = 90;
+                else score = 70;
             }
-        } else if (t.posType === 'homePath') {
-            if (t.posIndex + val === 4) {
-                score = 90; // Finish!
+
+            if (score > maxScore) {
+                maxScore = score;
+                best = t;
+            }
+        });
+
+        this.handleTokenMove(this.getCurrentPlayerColor(), best.id);
+    }
+
+    checkWinCondition(color) {
+        return this.state.tokens[color].every(t => t.posType === 'finished');
+    }
+
+    handleWin(color) {
+        this.app.sounds.playWin();
+        const account = this.app.accounts.getActiveAccount();
+        if (account) {
+            account.played += 1;
+            // Win credited if matches current user color / role
+            if (this.state.players[color] && this.state.players[color].type === 'human') {
+                account.wins += 1;
+            }
+            this.app.accounts.save();
+        }
+
+        document.getElementById('winner-title').innerText = "Tebrikler!";
+        document.getElementById('winner-text').innerText = `Oyunu ${COLOR_NAMES[color]} kazandı!`;
+        document.getElementById('winner-modal').classList.remove('hidden');
+        
+        sessionStorage.removeItem('kizmabirader_state');
+    }
+
+    syncState() {
+        this.saveLocalBackup();
+        if (this.app.firebase.isMultiplayerActive) {
+            this.app.firebase.updatePlayerStateDirect(this.state);
+        }
+    }
+
+    render() {
+        // Clear old tokens
+        document.querySelectorAll('.token-container').forEach(el => el.remove());
+        document.querySelectorAll('.token').forEach(el => el.remove());
+
+        const placement = {};
+        COLORS.forEach(color => {
+            if (!this.state.players[color] || this.state.players[color].type === 'none') return;
+            this.state.tokens[color].forEach(t => {
+                let coords = null;
+                if (t.posType === 'base') coords = COLOR_CONFIGS[color].basePockets[t.posIndex];
+                else if (t.posType === 'track') coords = TRACK_COORDS[t.posIndex];
+                else if (t.posType === 'homePath') coords = COLOR_CONFIGS[color].homePath[t.posIndex];
+
+                if (coords) {
+                    const key = `${coords.r},${coords.c}`;
+                    if (!placement[key]) placement[key] = [];
+                    placement[key].push({ color, token: t });
+                }
+            });
+        });
+
+        // Draw tokens
+        Object.keys(placement).forEach(key => {
+            const [r, c] = key.split(',').map(Number);
+            const tokens = placement[key];
+            const cell = this.findCell(r, c);
+            if (!cell) return;
+
+            if (tokens.length > 1) {
+                const container = document.createElement('div');
+                container.className = 'token-container multiple';
+                tokens.forEach(({ color, token }) => {
+                    const el = this.createTokenEl(color, token);
+                    container.appendChild(el);
+                });
+                cell.appendChild(container);
             } else {
-                score = 70; // Keep moving in home path
+                const { color, token } = tokens[0];
+                const el = this.createTokenEl(color, token);
+                cell.appendChild(el);
+            }
+        });
+
+        // Update turn display info
+        const activeColor = this.getCurrentPlayerColor();
+        if (activeColor) {
+            const display = document.getElementById('current-player-display');
+            display.className = `player-badge active-${activeColor}`;
+            const nameSpan = display.querySelector('.player-name');
+            const p = this.state.players[activeColor];
+            nameSpan.innerText = `${COLOR_NAMES[activeColor]} (${p.type === 'ai' ? 'Yapay Zeka' : 'İnsan'})`;
+            
+            // Dice glow class
+            const dice3D = document.getElementById('dice-3d');
+            dice3D.className = 'dice';
+            if (!this.state.hasRolled && p.type !== 'ai' && this.isMyTurn()) {
+                dice3D.classList.add(`roll-active-${activeColor}`);
             }
         }
 
-        if (score > maxScore) {
-            maxScore = score;
-            bestToken = t;
-        }
-    });
-
-    handleTokenMove(getCurrentPlayerColor(), bestToken.id);
-}
-
-// Victory Checks
-function checkWinCondition(color) {
-    return gameState.tokens[color].every(t => t.posType === 'finished');
-}
-
-function handleWin(color) {
-    sounds.playWin();
-    
-    const currentAccount = accounts.find(a => a.username === activeUsername);
-    if (currentAccount) {
-        currentAccount.played += 1;
-        if (gameState.players[color] && gameState.players[color].type === 'human') {
-            currentAccount.wins += 1;
-        }
-        saveProfileStats();
-    }
-    
-    winnerTitle.innerText = "Tebrikler!";
-    winnerTextEl.innerText = `Oyunu ${COLOR_NAMES[color]} kazandı!`;
-    winnerModal.classList.remove('hidden');
-    sessionStorage.removeItem('kizmabirader_state');
-}
-
-// UI State Updates
-function updateUI() {
-    // Current player badge
-    const activeColor = getCurrentPlayerColor();
-    if (!activeColor) return;
-
-    currentPlayerDisplay.className = `player-badge active-${activeColor}`;
-    
-    const activePlayer = gameState.players[activeColor];
-    if (activePlayer) {
-        const typeStr = activePlayer.type === 'ai' ? 'Yapay Zeka' : 'İnsan';
-        const nameStr = COLOR_NAMES[activeColor] || activeColor;
-        const nameSpan = currentPlayerDisplay.querySelector('.player-name');
-        if (nameSpan) nameSpan.innerText = `${nameStr} (${typeStr})`;
-    }
-
-    // Indicators / Ranks
-    COLORS.forEach(color => {
-        const row = document.getElementById(`status-${color}`);
-        if (row) {
-            const player = gameState.players[color];
-            if (!player || player.type === 'none') {
+        // Side ranks
+        COLORS.forEach(color => {
+            const row = document.getElementById(`status-${color}`);
+            if (!row) return;
+            const p = this.state.players[color];
+            if (!p || p.type === 'none') {
                 row.classList.add('hidden');
             } else {
                 row.classList.remove('hidden');
@@ -962,632 +1029,741 @@ function updateUI() {
                     row.classList.remove('active-turn');
                     row.style.color = '';
                 }
-                
-                const finishedCount = (gameState.tokens[color] || []).filter(t => t.posType === 'finished').length;
-                const progressSpan = row.querySelector('.p-progress');
-                if (progressSpan) progressSpan.innerText = `Bitiş: ${finishedCount}/4`;
-                
-                const statusSpan = row.querySelector('.p-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = player.type === 'ai' 
-                        ? `<i class="fa-solid fa-robot"></i> ${COLOR_NAMES[color]}` 
-                        : `<i class="fa-solid fa-user"></i> ${COLOR_NAMES[color]}`;
-                }
+                const finished = this.state.tokens[color].filter(t => t.posType === 'finished').length;
+                row.querySelector('.p-progress').innerText = `Bitiş: ${finished}/4`;
+                row.querySelector('.p-status').innerHTML = p.type === 'ai'
+                    ? `<i class="fa-solid fa-robot"></i> ${COLOR_NAMES[color]}`
+                    : `<i class="fa-solid fa-user"></i> ${COLOR_NAMES[color]}`;
             }
-        }
-    });
-
-    // Disable dice if already rolled or AI is moving
-    const activePlayerConfig = gameState.players[activeColor];
-    if (gameState.hasRolled || (activePlayerConfig && activePlayerConfig.type === 'ai')) {
-        rollDiceBtn.disabled = true;
-    } else {
-        rollDiceBtn.disabled = false;
-    }
-
-    // Toggle active player dice glow
-    if (dice3D) {
-        dice3D.className = 'dice';
-        if (!gameState.hasRolled && activePlayerConfig && activePlayerConfig.type !== 'ai') {
-            dice3D.classList.add(`roll-active-${activeColor}`);
-        }
-    }
-
-    renderTokens();
-}
-
-function logMessage(text, colorClass = 'system') {
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${colorClass}`;
-    
-    let icon = '<i class="fa-solid fa-circle-info"></i> ';
-    if (colorClass !== 'system') {
-        icon = '<i class="fa-solid fa-circle-play"></i> ';
-    }
-    
-    entry.innerHTML = icon + text;
-    gameLog.appendChild(entry);
-    gameLog.scrollTop = gameLog.scrollHeight;
-}
-
-// Auto Save / Resume Game
-function saveGameState() {
-    sessionStorage.setItem('kizmabirader_state', JSON.stringify(gameState));
-}
-
-function loadGameState() {
-    const saved = sessionStorage.getItem('kizmabirader_state');
-    if (saved) {
-        try {
-            const parsed = JSON.parse(saved);
-            if (parsed && parsed.activePlayers && parsed.activePlayers.length > 0) {
-                gameState = parsed;
-                showPanel('game-panel');
-                buildBoardUI();
-                updateUI();
-                logMessage("Kaldığınız yerden devam ediliyor...", getCurrentPlayerColor());
-                checkAndTriggerAI();
-            } else {
-                sessionStorage.removeItem('kizmabirader_state');
-            }
-        } catch (e) {
-            console.error("Auto load failed", e);
-            sessionStorage.removeItem('kizmabirader_state');
-        }
-    }
-}
-
-// Theme toggles
-themeBtn.addEventListener('click', () => {
-    const curTheme = document.body.getAttribute('data-theme') || 'dark';
-    const nextTheme = curTheme === 'dark' ? 'light' : 'dark';
-    document.body.setAttribute('data-theme', nextTheme);
-    themeBtn.querySelector('i').className = nextTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
-});
-
-// Sound toggles
-soundBtn.addEventListener('click', () => {
-    const isEnabled = sounds.toggle();
-    soundBtn.querySelector('i').className = isEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
-});
-
-// Rules Modal Contents
-const RULES_CONTENT = {
-    hub: `
-        <h3>Masa Oyunu Platformu</h3>
-        <p>Hub üzerinden dilediğiniz klasik oyunu seçip oynayabilirsiniz. Şu an aktif oyunlar:</p>
-        <ul>
-            <li><strong>Kızma Birader (Ludo):</strong> 2-4 oyunculu klasik şans ve strateji oyunu.</li>
-            <li><strong>SOS Oyunu:</strong> Grid üzerinde harf yerleştirme ve puan toplama oyunu.</li>
-        </ul>
-    `,
-    ludo: `
-        <h3>Kızma Birader Kuralları</h3>
-        <p>4 piyonunuzun tamamını oyun tahtası etrafında tam tur döndürerek kendi renginizdeki hedef (ev) alanına ulaştıran ilk oyuncu olmak.</p>
-        <h3>Başlangıç & Zar</h3>
-        <ul>
-            <li>Piyonların başlangıç kalesinden çıkabilmesi için <strong>6</strong> atılması gerekir.</li>
-            <li>Zarda 6 atan oyuncu bir piyonunu çıkarabilir ve <strong>ekstra zar atma hakkı</strong> kazanır.</li>
-            <li>Sırası gelen oyuncu zarı atar ve gelen sayı kadar piyonunu saat yönünde ilerletir.</li>
-        </ul>
-        <h3>Piyon Kırma & Güvenli Bölgeler</h3>
-        <ul>
-            <li>Eğer hareketiniz rakip piyonun bulunduğu karede biterse, rakip piyon **kırılır** ve başlangıç kalesine geri döner.</li>
-            <li>Güvenli bölgelerde (Yıldız/Kalkan işaretli kareler) piyonlar kırılamaz. Aynı karede birden fazla piyon durabilir.</li>
-        </ul>
-        <h3>Oyunu Bitirme</h3>
-        <ul>
-            <li>Piyonlar hedefe girmek için tam gerekli sayıyı atmalıdır. Fazla sayı gelirse piyon hedefe giremez ve olduğu yerde bekler.</li>
-        </ul>
-    `,
-    sos: `
-        <h3>SOS Oyun Kuralları</h3>
-        <p>Boş hücrelere sırayla <strong>S</strong> ya da <strong>O</strong> harfi yerleştirin.</p>
-        <h3>Puanlama</h3>
-        <ul>
-            <li>Yatay, dikey ya da çapraz olarak <strong>S-O-S</strong> harf dizilimini oluşturan oyuncu 1 puan kazanır.</li>
-            <li>SOS yapan oyuncu <strong>ekstra bir hamle hakkı</strong> kazanır.</li>
-            <li>Tahtadaki tüm hücreler dolduğunda en çok puana sahip olan oyuncu oyunu kazanır.</li>
-        </ul>
-    `
-};
-
-// Modal Dialog rules
-rulesBtn.addEventListener('click', () => {
-    const rulesBody = document.getElementById('rules-modal-body');
-    if (!gamePanel.classList.contains('hidden')) {
-        rulesBody.innerHTML = RULES_CONTENT.ludo;
-    } else if (!sosGamePanel.classList.contains('hidden')) {
-        rulesBody.innerHTML = RULES_CONTENT.sos;
-    } else {
-        rulesBody.innerHTML = RULES_CONTENT.hub;
-    }
-    rulesModal.classList.remove('hidden');
-});
-closeRulesBtn.addEventListener('click', () => rulesModal.classList.add('hidden'));
-
-// ---------------- SOS GAME ENGINE ----------------
-
-let sosState = {
-    boardSize: 4,
-    player2Type: 'ai',
-    board: [], // Array of size*size elements: { char: 'S'|'O'|'', owner: 1|2 }
-    currentPlayer: 1, // 1 | 2
-    scores: { 1: 0, 2: 0 },
-    activeLetter: 'S',
-    completedSOS: [] // Array of 'idx1,idx2,idx3' keys
-};
-
-// Selection of Letter
-sosBtnS.addEventListener('click', () => {
-    sosState.activeLetter = 'S';
-    sosBtnS.classList.add('active');
-    sosBtnO.classList.remove('active');
-});
-
-sosBtnO.addEventListener('click', () => {
-    sosState.activeLetter = 'O';
-    sosBtnO.classList.add('active');
-    sosBtnS.classList.remove('active');
-});
-
-// Setup -> Start SOS Game
-sosStartBtn.addEventListener('click', () => {
-    const size = parseInt(document.querySelector('input[name="sos-size"]:checked').value);
-    const opponent = document.querySelector('input[name="sos-player2"]:checked').value;
-    
-    initSOSGame(size, opponent);
-});
-
-function initSOSGame(size, opponent, savedState = null) {
-    if (savedState) {
-        sosState = savedState;
-    } else {
-        sosState.boardSize = size;
-        sosState.player2Type = opponent;
-        sosState.currentPlayer = 1;
-        sosState.scores = { 1: 0, 2: 0 };
-        sosState.activeLetter = 'S';
-        sosState.completedSOS = [];
-        
-        sosState.board = [];
-        for (let i = 0; i < size * size; i++) {
-            sosState.board.push({ char: '', owner: null });
-        }
-    }
-    
-    saveSOSState();
-    showPanel('sos-game-panel');
-    buildSOSBoardUI();
-    updateSOSUI();
-    
-    if (sosState.currentPlayer === 2 && sosState.player2Type === 'ai') {
-        setTimeout(makeSOSAIMove, 1000);
-    }
-}
-
-function buildSOSBoardUI() {
-    sosGridContainer.innerHTML = '';
-    const size = sosState.boardSize;
-    
-    sosGridContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-    sosGridContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
-    
-    sosState.board.forEach((cell, idx) => {
-        const cellEl = document.createElement('div');
-        cellEl.className = 'sos-cell';
-        cellEl.dataset.index = idx;
-        
-        if (cell.char !== '') {
-            cellEl.innerText = cell.char;
-            cellEl.classList.add('filled');
-            cellEl.classList.add(cell.owner === 1 ? 'p1-placed' : 'p2-placed');
-        }
-        
-        // Check if part of any completed SOS
-        const isCompleted = sosState.completedSOS.some(key => {
-            const indices = key.split(',').map(Number);
-            return indices.includes(idx);
         });
+    }
+
+    createTokenEl(color, token) {
+        const el = document.createElement('div');
+        el.className = `token token-${color}`;
+        el.innerText = token.id + 1;
         
-        if (isCompleted) {
-            cellEl.classList.add('sos-complete');
+        if (this.isPlayableToken(color, token) && this.isMyTurn()) {
+            el.classList.add('playable');
+            el.addEventListener('click', () => this.handleTokenMove(color, token.id));
         }
-        
-        if (cell.char === '' && !(sosState.currentPlayer === 2 && sosState.player2Type === 'ai')) {
-            cellEl.addEventListener('click', () => handleSOSCellClick(idx));
-        }
-        
-        sosGridContainer.appendChild(cellEl);
-    });
-}
+        return el;
+    }
 
-function handleSOSCellClick(idx) {
-    if (sosState.board[idx].char !== '') return;
-    
-    applySOSMove(idx, sosState.activeLetter);
-}
-
-function applySOSMove(idx, char) {
-    if (isMultiplayerActive) {
-        const myNum = myPlayerKey === 'player1' ? 1 : 2;
-        if (sosState.currentPlayer !== myNum) {
-            alert("Sıra sizde değil!");
-            return;
+    findCell(r, c) {
+        const pockets = document.querySelectorAll('.pocket');
+        for (let pocket of pockets) {
+            const color = pocket.dataset.pocketColor;
+            const idx = Number(pocket.dataset.pocketIndex);
+            const conf = COLOR_CONFIGS[color].basePockets[idx];
+            if (conf.r === r && conf.c === c) return pocket;
         }
+        return document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
     }
-    sosState.board[idx].char = char;
-    sosState.board[idx].owner = sosState.currentPlayer;
-    sounds.playMove();
-    
-    // Check if new SOS formed
-    const newMatches = checkSOSFormed(idx, char);
-    
-    if (newMatches.length > 0) {
-        // Increase score
-        sosState.scores[sosState.currentPlayer] += newMatches.length;
-        
-        // Add to completed list
-        newMatches.forEach(match => {
-            sosState.completedSOS.push(match.tripletKey);
-        });
-        
-        sounds.playHome();
-    } else {
-        // Switch turn if no SOS was formed
-        sosState.currentPlayer = sosState.currentPlayer === 1 ? 2 : 1;
-    }
-    
-    saveSOSState();
-    buildSOSBoardUI();
-    updateSOSUI();
-    if (isMultiplayerActive) {
-        currentRoomRef.child('state').set(sosState);
-    }
-    
-    // Check game over
-    const emptyIndices = sosState.board.filter(c => c.char === '').length;
-    if (emptyIndices === 0) {
-        setTimeout(handleSOSGameOver, 600);
-        return;
-    }
-    
-    // Trigger AI if turn fits
-    if (sosState.currentPlayer === 2 && sosState.player2Type === 'ai') {
-        setTimeout(makeSOSAIMove, 1000);
+
+    logMessage(text, color = 'system') {
+        const log = document.getElementById('game-log');
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${color}`;
+        entry.innerHTML = (color === 'system' ? '<i class="fa-solid fa-circle-info"></i> ' : '<i class="fa-solid fa-circle-play"></i> ') + text;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
     }
 }
 
-function checkSOSFormed(placedIdx, placedChar) {
-    const size = sosState.boardSize;
-    const r = Math.floor(placedIdx / size);
-    const c = placedIdx % size;
-    let sosFound = [];
-
-    // Direction steps: [rowOffset, colOffset]
-    const dirs = [
-        [0, 1],   // Horizontal
-        [1, 0],   // Vertical
-        [1, 1],   // Diagonal Down-Right
-        [1, -1]   // Diagonal Down-Left
-    ];
-
-    dirs.forEach(([dr, dc]) => {
-        if (placedChar === 'O') {
-            // Check opposite neighbors: S-O-S
-            const r1 = r - dr, c1 = c - dc;
-            const r2 = r + dr, c2 = c + dc;
-            if (r1 >= 0 && r1 < size && c1 >= 0 && c1 < size &&
-                r2 >= 0 && r2 < size && c2 >= 0 && c2 < size) {
-                const idx1 = r1 * size + c1;
-                const idx2 = r2 * size + c2;
-                if (sosState.board[idx1] && sosState.board[idx1].char === 'S' &&
-                    sosState.board[idx2] && sosState.board[idx2].char === 'S') {
-                    const tripletKey = [idx1, placedIdx, idx2].sort((a,b) => a-b).join(',');
-                    if (!sosState.completedSOS.includes(tripletKey)) {
-                        sosFound.push({ tripletKey, cells: [idx1, placedIdx, idx2] });
-                    }
-                }
-            }
-        } else if (placedChar === 'S') {
-            // Check two cells forward: S-O-S
-            const r1_1 = r + dr, c1_1 = c + dc;
-            const r1_2 = r + 2 * dr, c1_2 = c + 2 * dc;
-            if (r1_1 >= 0 && r1_1 < size && c1_1 >= 0 && c1_1 < size &&
-                r1_2 >= 0 && r1_2 < size && c1_2 >= 0 && c1_2 < size) {
-                const idx1 = r1_1 * size + c1_1;
-                const idx2 = r1_2 * size + c1_2;
-                if (sosState.board[idx1] && sosState.board[idx1].char === 'O' &&
-                    sosState.board[idx2] && sosState.board[idx2].char === 'S') {
-                    const tripletKey = [placedIdx, idx1, idx2].sort((a,b) => a-b).join(',');
-                    if (!sosState.completedSOS.includes(tripletKey)) {
-                        sosFound.push({ tripletKey, cells: [placedIdx, idx1, idx2] });
-                    }
-                }
-            }
-            // Check two cells backward: S-O-S
-            const r2_1 = r - dr, c2_1 = c - dc;
-            const r2_2 = r - 2 * dr, c2_2 = c - 2 * dc;
-            if (r2_1 >= 0 && r2_1 < size && c2_1 >= 0 && c2_1 < size &&
-                r2_2 >= 0 && r2_2 < size && c2_2 >= 0 && c2_2 < size) {
-                const idx1 = r2_1 * size + c2_1;
-                const idx2 = r2_2 * size + c2_2;
-                if (sosState.board[idx1] && sosState.board[idx1].char === 'O' &&
-                    sosState.board[idx2] && sosState.board[idx2].char === 'S') {
-                    const tripletKey = [placedIdx, idx1, idx2].sort((a,b) => a-b).join(',');
-                    if (!sosState.completedSOS.includes(tripletKey)) {
-                        sosFound.push({ tripletKey, cells: [placedIdx, idx1, idx2] });
-                    }
-                }
-            }
-        }
-    });
-
-    return sosFound;
-}
-
-function makeSOSAIMove() {
-    const emptyIndices = [];
-    sosState.board.forEach((cell, idx) => {
-        if (cell.char === '') emptyIndices.push(idx);
-    });
-
-    if (emptyIndices.length === 0) return;
-
-    // 1. Check if AI can make an SOS immediately
-    for (let idx of emptyIndices) {
-        sosState.board[idx].char = 'S';
-        let matches = checkSOSFormed(idx, 'S');
-        sosState.board[idx].char = ''; // revert
-        if (matches.length > 0) {
-            applySOSMove(idx, 'S');
-            return;
-        }
-
-        sosState.board[idx].char = 'O';
-        matches = checkSOSFormed(idx, 'O');
-        sosState.board[idx].char = ''; // revert
-        if (matches.length > 0) {
-            applySOSMove(idx, 'O');
-            return;
-        }
-    }
-
-    // 2. Block Opponent from making an SOS
-    for (let idx of emptyIndices) {
-        sosState.board[idx].char = 'S';
-        let matches = checkSOSFormed(idx, 'S');
-        sosState.board[idx].char = ''; // revert
-        if (matches.length > 0) {
-            applySOSMove(idx, 'O');
-            return;
-        }
-
-        sosState.board[idx].char = 'O';
-        matches = checkSOSFormed(idx, 'O');
-        sosState.board[idx].char = ''; // revert
-        if (matches.length > 0) {
-            applySOSMove(idx, 'S');
-            return;
-        }
-    }
-
-    // 3. Fallback: Place S or O randomly
-    const randomIdx = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-    const randomChar = Math.random() > 0.5 ? 'S' : 'O';
-    applySOSMove(randomIdx, randomChar);
-}
-
-function updateSOSUI() {
-    // Score labels
-    sosStatusP1.querySelector('.player-name').innerText = `Oyuncu 1: ${sosState.scores[1]} SOS`;
-    const p2TypeStr = sosState.player2Type === 'ai' ? 'Yapay Zeka' : 'Oyuncu 2';
-    sosStatusP2.querySelector('.player-name').innerText = `${p2TypeStr}: ${sosState.scores[2]} SOS`;
-    
-    // Turn active indicators
-    if (sosState.currentPlayer === 1) {
-        sosStatusP1.classList.add('active-turn');
-        sosStatusP2.classList.remove('active-turn');
-        sosTurnBadge.innerText = 'Oyuncu 1';
-        sosTurnBadge.className = 'player-badge active-red'; // dynamic indicator class
-    } else {
-        sosStatusP2.classList.add('active-turn');
-        sosStatusP1.classList.remove('active-turn');
-        sosTurnBadge.innerText = p2TypeStr;
-        sosTurnBadge.className = 'player-badge active-blue';
-    }
-}
-
-function handleSOSGameOver() {
-    sounds.playWin();
-    
-    const currentAccount = accounts.find(a => a.username === activeUsername);
-    if (currentAccount) {
-        currentAccount.played += 1;
-        if (sosState.scores[1] > sosState.scores[2]) {
-            currentAccount.wins += 1;
-        }
-        saveProfileStats();
-    }
-    
-    let resultText = "";
-    if (sosState.scores[1] > sosState.scores[2]) {
-        resultText = "Oyuncu 1 kazandı!";
-    } else if (sosState.scores[2] > sosState.scores[1]) {
-        const p2TypeStr = sosState.player2Type === 'ai' ? 'Yapay Zeka' : 'Oyuncu 2';
-        resultText = `${p2TypeStr} kazandı!`;
-    } else {
-        resultText = "Berabere bitti!";
-    }
-    
-    winnerTitle.innerText = "Oyun Bitti!";
-    winnerTextEl.innerText = resultText;
-    winnerModal.classList.remove('hidden');
-    
-    sessionStorage.removeItem('sos_state');
-}
-
-// SOS sidebar resets
-sosResetBtn.addEventListener('click', () => {
-    if (confirm("Oyunu baştan açmak istediğinize emin misiniz?")) {
-        initSOSGame(sosState.boardSize, sosState.player2Type);
-    }
-});
-
-sosEndBtn.addEventListener('click', () => {
-    winnerModal.classList.add('hidden');
-    showPanel('hub-panel');
-    sessionStorage.removeItem('sos_state');
-});
-
-// Auto-save & resume for SOS
-function saveSOSState() {
-    sessionStorage.setItem('sos_state', JSON.stringify(sosState));
-}
-
-function loadSOSState() {
-    const saved = sessionStorage.getItem('sos_state');
-    if (saved) {
-        try {
-            const parsed = JSON.parse(saved);
-            if (parsed && parsed.board && parsed.board.length > 0) {
-                initSOSGame(parsed.boardSize, parsed.player2Type, parsed);
-            }
-        } catch(e) {}
-    }
-}
-
-// Profile setup form submission
-regSubmitBtn.addEventListener('click', () => {
-    const username = regUsername.value.trim();
-    if (!username) {
-        alert("Lütfen geçerli bir kullanıcı adı girin!");
-        return;
-    }
-    
-    // Check duplication
-    const isEditing = regSubmitBtn.dataset.editing === 'true';
-    if (!isEditing && accounts.some(a => a.username.toLowerCase() === username.toLowerCase())) {
-        alert("Bu kullanıcı adı zaten alınmış!");
-        return;
-    }
-
-    const selectedAvatarEl = document.querySelector('input[name="reg-avatar"]:checked');
-    const avatar = selectedAvatarEl ? selectedAvatarEl.value : 'fa-user-astronaut';
-
-    const selectedColorEl = document.querySelector('input[name="reg-color"]:checked');
-    const color = selectedColorEl ? selectedColorEl.value : 'red';
-
-    // Create or edit profile
-    let targetProfile = accounts.find(a => a.username === username);
-    if (!targetProfile) {
-        targetProfile = {
-            username: username,
-            avatar: avatar,
-            color: color,
-            played: 0,
-            wins: 0
+// ==========================================
+// 7. SOS GAME ENGINE
+// ==========================================
+class SOSEngine {
+    constructor(appRef) {
+        this.app = appRef;
+        this.state = {
+            boardSize: 4,
+            player2Type: 'ai',
+            board: [], // char: 'S'|'O'|'', owner: 1|2
+            currentPlayer: 1,
+            scores: { 1: 0, 2: 0 },
+            activeLetter: 'S',
+            completedSOS: []
         };
-        accounts.push(targetProfile);
-    } else {
-        targetProfile.avatar = avatar;
-        targetProfile.color = color;
     }
-    
-    activeUsername = username;
-    saveProfileStats();
-    
-    // Clear input
-    regUsername.value = '';
-    delete regSubmitBtn.dataset.editing;
-    
-    showPanel('hub-panel');
-});
 
-regCancelBtn.addEventListener('click', () => {
-    if (accounts.length > 0) {
-        showPanel('hub-panel');
+    startLocalGame(size, p2Type) {
+        this.state = {
+            boardSize: size,
+            player2Type: p2Type,
+            board: Array.from({ length: size * size }, () => ({ char: '', owner: null })),
+            currentPlayer: 1,
+            scores: { 1: 0, 2: 0 },
+            activeLetter: 'S',
+            completedSOS: []
+        };
+
+        this.saveLocalBackup();
+        this.render();
     }
-});
 
-// Profile Switcher Events
-hubSwitchProfileBtn.addEventListener('click', () => {
-    updateProfilesListUI();
-    profileSwitchModal.classList.remove('hidden');
-});
+    startOnlineGame(onlineState) {
+        this.state = onlineState;
+        this.render();
+        this.checkAndTriggerAI();
+    }
 
-closeProfileSwitchBtn.addEventListener('click', () => {
-    profileSwitchModal.classList.add('hidden');
-});
+    saveLocalBackup() {
+        if (!this.app.firebase.isMultiplayerActive) {
+            sessionStorage.setItem('sos_state', JSON.stringify(this.state));
+        }
+    }
 
-hubNewProfileBtn.addEventListener('click', () => {
-    regUsername.value = '';
-    regCancelBtn.classList.remove('hidden');
-    delete regSubmitBtn.dataset.editing;
-    showPanel('profile-setup-panel');
-});
+    isMyTurn() {
+        if (!this.app.firebase.isMultiplayerActive) return true;
+        const myNum = this.app.firebase.myPlayerKey === 'player1' ? 1 : 2;
+        return this.state.currentPlayer === myNum;
+    }
 
-function updateProfilesListUI() {
-    profilesListContainer.innerHTML = '';
-    
-    accounts.forEach(account => {
-        const item = document.createElement('div');
-        item.className = `profile-item ${account.username === activeUsername ? 'active-profile' : ''}`;
-        
-        const ratio = account.played > 0 ? Math.round((account.wins / account.played) * 100) : 0;
-        
-        item.innerHTML = `
-            <div class="profile-item-info">
-                <div class="profile-item-avatar theme-${account.color}" style="background: var(--color-${account.color}); box-shadow: 0 0 10px var(--color-${account.color});">
-                    <i class="fa-solid ${account.avatar}"></i>
-                </div>
-                <div>
-                    <div class="profile-item-name">${account.username}</div>
-                    <div class="profile-item-stats">Maç: ${account.played} | Galibiyet: ${account.wins} (%${ratio})</div>
-                </div>
-            </div>
-            ${accounts.length > 1 ? `<button class="profile-item-delete" title="Profili Sil"><i class="fa-solid fa-trash"></i></button>` : ''}
-        `;
-        
-        // Switch click
-        item.addEventListener('click', (e) => {
-            // If delete button was clicked, don't switch
-            if (e.target.closest('.profile-item-delete')) return;
-            
-            activeUsername = account.username;
-            saveProfileStats();
-            profileSwitchModal.classList.add('hidden');
-        });
-        
-        // Delete click
-        const delBtn = item.querySelector('.profile-item-delete');
-        if (delBtn) {
-            delBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (confirm(`"${account.username}" profilini silmek istediğinize emin misiniz? Bütün istatistikleriniz silinecektir.`)) {
-                    accounts = accounts.filter(a => a.username !== account.username);
-                    if (activeUsername === account.username) {
-                        activeUsername = accounts[0].username;
-                    }
-                    saveProfileStats();
-                    updateProfilesListUI();
-                    if (accounts.length === 0) {
-                        profileSwitchModal.classList.add('hidden');
-                        regCancelBtn.classList.add('hidden');
-                        showPanel('profile-setup-panel');
+    cellClick(idx) {
+        if (this.state.board[idx].char !== '') return;
+        if (this.app.firebase.isMultiplayerActive && !this.isMyTurn()) return;
+
+        this.applyMove(idx, this.state.activeLetter);
+    }
+
+    applyMove(idx, char) {
+        this.state.board[idx].char = char;
+        this.state.board[idx].owner = this.state.currentPlayer;
+        this.app.sounds.playMove();
+
+        const matches = this.checkSOSFormed(idx, char);
+        if (matches.length > 0) {
+            this.state.scores[this.state.currentPlayer] += matches.length;
+            matches.forEach(m => this.state.completedSOS.push(m.tripletKey));
+            this.app.sounds.playHome();
+        } else {
+            this.state.currentPlayer = this.state.currentPlayer === 1 ? 2 : 1;
+        }
+
+        this.syncState();
+        this.render();
+
+        const empty = this.state.board.filter(c => c.char === '').length;
+        if (empty === 0) {
+            setTimeout(() => this.handleGameOver(), 600);
+            return;
+        }
+
+        this.checkAndTriggerAI();
+    }
+
+    checkAndTriggerAI() {
+        if (this.state.currentPlayer === 2 && this.state.player2Type === 'ai') {
+            if (!this.app.firebase.isMultiplayerActive || this.app.firebase.myPlayerKey === 'player1') {
+                setTimeout(() => this.makeAIMove(), 1000);
+            }
+        }
+    }
+
+    checkSOSFormed(placedIdx, char) {
+        const size = this.state.boardSize;
+        const r = Math.floor(placedIdx / size);
+        const c = placedIdx % size;
+        const found = [];
+
+        const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+        dirs.forEach(([dr, dc]) => {
+            if (char === 'O') {
+                const r1 = r - dr, c1 = c - dc;
+                const r2 = r + dr, c2 = c + dc;
+                if (r1 >= 0 && r1 < size && c1 >= 0 && c1 < size &&
+                    r2 >= 0 && r2 < size && c2 >= 0 && c2 < size) {
+                    const idx1 = r1 * size + c1;
+                    const idx2 = r2 * size + c2;
+                    if (this.state.board[idx1].char === 'S' && this.state.board[idx2].char === 'S') {
+                        const key = [idx1, placedIdx, idx2].sort((a,b)=>a-b).join(',');
+                        if (!this.state.completedSOS.includes(key)) {
+                            found.push({ tripletKey: key });
+                        }
                     }
                 }
+            } else {
+                // Forward
+                const r1_1 = r + dr, c1_1 = c + dc;
+                const r1_2 = r + 2 * dr, c1_2 = c + 2 * dc;
+                if (r1_2 >= 0 && r1_2 < size && c1_2 >= 0 && c1_2 < size) {
+                    const idx1 = r1_1 * size + c1_1;
+                    const idx2 = r1_2 * size + c1_2;
+                    if (this.state.board[idx1].char === 'O' && this.state.board[idx2].char === 'S') {
+                        const key = [placedIdx, idx1, idx2].sort((a,b)=>a-b).join(',');
+                        if (!this.state.completedSOS.includes(key)) found.push({ tripletKey: key });
+                    }
+                }
+                // Backward
+                const r2_1 = r - dr, c2_1 = c - dc;
+                const r2_2 = r - 2 * dr, c2_2 = c - 2 * dc;
+                if (r2_2 >= 0 && r2_2 < size && c2_2 >= 0 && c2_2 < size) {
+                    const idx1 = r2_1 * size + c2_1;
+                    const idx2 = r2_2 * size + c2_2;
+                    if (this.state.board[idx1].char === 'O' && this.state.board[idx2].char === 'S') {
+                        const key = [placedIdx, idx1, idx2].sort((a,b)=>a-b).join(',');
+                        if (!this.state.completedSOS.includes(key)) found.push({ tripletKey: key });
+                    }
+                }
+            }
+        });
+        return found;
+    }
+
+    makeAIMove() {
+        const empty = [];
+        this.state.board.forEach((cell, idx) => {
+            if (cell.char === '') empty.push(idx);
+        });
+
+        if (empty.length === 0) return;
+
+        // 1. Check immediate win
+        for (let idx of empty) {
+            this.state.board[idx].char = 'S';
+            let matches = this.checkSOSFormed(idx, 'S');
+            this.state.board[idx].char = '';
+            if (matches.length > 0) { this.applyMove(idx, 'S'); return; }
+
+            this.state.board[idx].char = 'O';
+            matches = this.checkSOSFormed(idx, 'O');
+            this.state.board[idx].char = '';
+            if (matches.length > 0) { this.applyMove(idx, 'O'); return; }
+        }
+
+        // 2. Block opponent
+        for (let idx of empty) {
+            this.state.board[idx].char = 'S';
+            let matches = this.checkSOSFormed(idx, 'S');
+            this.state.board[idx].char = '';
+            if (matches.length > 0) { this.applyMove(idx, 'O'); return; }
+
+            this.state.board[idx].char = 'O';
+            matches = this.checkSOSFormed(idx, 'O');
+            this.state.board[idx].char = '';
+            if (matches.length > 0) { this.applyMove(idx, 'S'); return; }
+        }
+
+        // 3. Random choice
+        const rand = empty[Math.floor(Math.random() * empty.length)];
+        const char = Math.random() > 0.5 ? 'S' : 'O';
+        this.applyMove(rand, char);
+    }
+
+    handleGameOver() {
+        this.app.sounds.playWin();
+        const account = this.app.accounts.getActiveAccount();
+        if (account) {
+            account.played += 1;
+            if (this.state.scores[1] > this.state.scores[2]) {
+                account.wins += 1;
+            }
+            this.app.accounts.save();
+        }
+
+        let txt = "";
+        if (this.state.scores[1] > this.state.scores[2]) txt = "Oyuncu 1 kazandı!";
+        else if (this.state.scores[2] > this.state.scores[1]) {
+            txt = `${this.state.player2Type === 'ai' ? 'Yapay Zeka' : 'Oyuncu 2'} kazandı!`;
+        } else txt = "Berabere bitti!";
+
+        document.getElementById('winner-title').innerText = "Oyun Bitti!";
+        document.getElementById('winner-text').innerText = txt;
+        document.getElementById('winner-modal').classList.remove('hidden');
+
+        sessionStorage.removeItem('sos_state');
+    }
+
+    syncState() {
+        this.saveLocalBackup();
+        if (this.app.firebase.isMultiplayerActive) {
+            this.app.firebase.updatePlayerStateDirect(this.state);
+        }
+    }
+
+    render() {
+        const grid = document.getElementById('sos-grid-container');
+        grid.innerHTML = '';
+        const size = this.state.boardSize;
+
+        grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+        grid.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+
+        this.state.board.forEach((cell, idx) => {
+            const el = document.createElement('div');
+            el.className = 'sos-cell';
+            if (cell.char !== '') {
+                el.innerText = cell.char;
+                el.classList.add('filled');
+                el.classList.add(cell.owner === 1 ? 'p1-placed' : 'p2-placed');
+            }
+
+            const inComplete = this.state.completedSOS.some(k => k.split(',').map(Number).includes(idx));
+            if (inComplete) {
+                el.classList.add('sos-complete');
+            }
+
+            if (cell.char === '' && this.isMyTurn()) {
+                el.addEventListener('click', () => this.cellClick(idx));
+            }
+            grid.appendChild(el);
+        });
+
+        // UI Score updates
+        document.getElementById('sos-status-p1').querySelector('.player-name').innerText = `Oyuncu 1: ${this.state.scores[1]} SOS`;
+        const p2Str = this.state.player2Type === 'ai' ? 'Yapay Zeka' : 'Oyuncu 2';
+        document.getElementById('sos-status-p2').querySelector('.player-name').innerText = `${p2Str}: ${this.state.scores[2]} SOS`;
+
+        const badge = document.getElementById('sos-turn-badge');
+        const p1Status = document.getElementById('sos-status-p1');
+        const p2Status = document.getElementById('sos-status-p2');
+
+        if (this.state.currentPlayer === 1) {
+            p1Status.classList.add('active-turn');
+            p2Status.classList.remove('active-turn');
+            badge.innerText = 'Oyuncu 1';
+            badge.className = 'player-badge active-red';
+        } else {
+            p2Status.classList.add('active-turn');
+            p1Status.classList.remove('active-turn');
+            badge.innerText = p2Str;
+            badge.className = 'player-badge active-blue';
+        }
+    }
+}
+
+// ==========================================
+// 8. APP INITIALIZATION & COORDINATOR
+// ==========================================
+class App {
+    constructor() {
+        this.sounds = new SoundEngine();
+        this.accounts = new AccountManager();
+        this.firebase = new FirebaseManager();
+        this.navigation = new NavigationManager(this);
+        this.ludo = new LudoEngine(this);
+        this.sos = new SOSEngine(this);
+    }
+
+    init() {
+        this.accounts.load();
+        this.firebase.loadConfig();
+        this.ludo.init();
+        
+        this.initDOMEvents();
+        this.setupMultiplayerSync();
+        
+        // Auto-login or Setup
+        if (this.accounts.accounts.length === 0) {
+            this.navigation.showPanel('profile-setup-panel');
+            document.getElementById('reg-cancel-btn').classList.add('hidden');
+        } else {
+            if (!this.accounts.activeUsername || !this.accounts.accounts.some(a => a.username === this.accounts.activeUsername)) {
+                this.accounts.activeUsername = this.accounts.accounts[0].username;
+            }
+            this.navigation.showPanel('hub-panel');
+            this.accounts.updateProfileUI();
+        }
+
+        // Resume active session
+        this.resumeActiveSessions();
+    }
+
+    resumeActiveSessions() {
+        const savedLudo = sessionStorage.getItem('kizmabirader_state');
+        const savedSos = sessionStorage.getItem('sos_state');
+        
+        if (savedLudo) {
+            try {
+                const parsed = JSON.parse(savedLudo);
+                if (parsed && parsed.activePlayers && parsed.activePlayers.length > 0) {
+                    this.ludo.state = parsed;
+                    this.navigation.showPanel('game-panel');
+                    this.ludo.render();
+                    this.ludo.logMessage("Kaldığınız yerden devam ediliyor...", this.ludo.getCurrentPlayerColor());
+                    this.ludo.checkAndTriggerAI();
+                }
+            } catch(e) { sessionStorage.removeItem('kizmabirader_state'); }
+        } else if (savedSos) {
+            try {
+                const parsed = JSON.parse(savedSos);
+                if (parsed && parsed.board && parsed.board.length > 0) {
+                    this.sos.state = parsed;
+                    this.navigation.showPanel('sos-game-panel');
+                    this.sos.render();
+                    this.sos.checkAndTriggerAI();
+                }
+            } catch(e) { sessionStorage.removeItem('sos_state'); }
+        }
+    }
+
+    initDOMEvents() {
+        // Logo Return
+        document.getElementById('logo-back-to-hub').addEventListener('click', () => {
+            document.getElementById('winner-modal').classList.add('hidden');
+            this.firebase.disconnect();
+            this.navigation.showPanel('hub-panel');
+        });
+
+        // Header controls
+        document.getElementById('firebase-config-btn').addEventListener('click', () => {
+            const modal = document.getElementById('firebase-config-modal');
+            const input = document.getElementById('firebase-config-input');
+            if (this.firebase.config) {
+                input.value = JSON.stringify(this.firebase.config, null, 2);
+            } else {
+                input.value = '';
+            }
+            modal.classList.remove('hidden');
+        });
+        document.getElementById('close-firebase-btn').addEventListener('click', () => {
+            document.getElementById('firebase-config-modal').classList.add('hidden');
+        });
+        document.getElementById('save-firebase-btn').addEventListener('click', () => {
+            const val = document.getElementById('firebase-config-input').value;
+            if (this.firebase.saveConfig(val)) {
+                document.getElementById('firebase-config-modal').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('rules-btn').addEventListener('click', () => this.navigation.openRules());
+        document.getElementById('close-rules-btn').addEventListener('click', () => this.navigation.closeRules());
+        
+        document.getElementById('sound-btn').addEventListener('click', () => {
+            const active = this.sounds.toggle();
+            document.getElementById('sound-btn').querySelector('i').className = active ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+        });
+
+        document.getElementById('theme-btn').addEventListener('click', () => this.navigation.toggleTheme());
+
+        // Account form
+        document.getElementById('reg-submit-btn').addEventListener('click', () => {
+            const username = document.getElementById('reg-username').value.trim();
+            if (!username) return alert("Geçersiz kullanıcı adı!");
+            
+            const avatar = document.querySelector('input[name="reg-avatar"]:checked').value;
+            const color = document.querySelector('input[name="reg-color"]:checked').value;
+            
+            this.accounts.createProfile(username, avatar, color);
+            document.getElementById('reg-username').value = '';
+            this.navigation.showPanel('hub-panel');
+        });
+
+        document.getElementById('reg-cancel-btn').addEventListener('click', () => {
+            if (this.accounts.accounts.length > 0) this.navigation.showPanel('hub-panel');
+        });
+
+        document.getElementById('hub-new-profile-btn').addEventListener('click', () => {
+            document.getElementById('reg-username').value = '';
+            document.getElementById('reg-cancel-btn').classList.remove('hidden');
+            this.navigation.showPanel('profile-setup-panel');
+        });
+
+        document.getElementById('hub-switch-profile-btn').addEventListener('click', () => {
+            this.updateSwitcherUI();
+            document.getElementById('profile-switch-modal').classList.remove('hidden');
+        });
+        document.getElementById('close-profile-switch-btn').addEventListener('click', () => {
+            document.getElementById('profile-switch-modal').classList.add('hidden');
+        });
+
+        // Game setup pages navigation
+        document.getElementById('btn-play-ludo-local').addEventListener('click', () => {
+            this.navigation.showPanel('setup-panel');
+        });
+        document.getElementById('ludo-setup-back-btn').addEventListener('click', () => {
+            this.navigation.showPanel('hub-panel');
+        });
+
+        document.getElementById('btn-play-sos-local').addEventListener('click', () => {
+            this.navigation.showPanel('sos-setup-panel');
+        });
+        document.getElementById('sos-setup-back-btn').addEventListener('click', () => {
+            this.navigation.showPanel('hub-panel');
+        });
+
+        // Online mode game lobby triggers
+        document.getElementById('btn-play-ludo-online').addEventListener('click', () => {
+            if (!this.firebase.isConfigured()) return alert("Öncelikle Firebase'i yapılandırmalısınız!");
+            this.openMultiplayerLobby('ludo');
+        });
+        document.getElementById('btn-play-sos-online').addEventListener('click', () => {
+            if (!this.firebase.isConfigured()) return alert("Öncelikle Firebase'i yapılandırmalısınız!");
+            this.openMultiplayerLobby('sos');
+        });
+
+        document.getElementById('multiplayer-lobby-back-btn').addEventListener('click', () => {
+            this.firebase.disconnect();
+            this.navigation.showPanel('hub-panel');
+        });
+
+        // Lobby Actions
+        document.getElementById('btn-create-room').addEventListener('click', async () => {
+            const acc = this.accounts.getActiveAccount();
+            const code = await this.firebase.createRoom(this.firebase.gameName, acc);
+            if (code) {
+                document.getElementById('lobby-room-details').classList.remove('hidden');
+                document.getElementById('room-code-display').innerText = code;
+            }
+        });
+
+        document.getElementById('btn-join-room').addEventListener('click', async () => {
+            const input = document.getElementById('join-room-code-input').value;
+            const acc = this.accounts.getActiveAccount();
+            const code = await this.firebase.joinRoom(input, this.firebase.gameName, acc);
+            if (code) {
+                document.getElementById('lobby-room-details').classList.remove('hidden');
+                document.getElementById('room-code-display').innerText = code;
+            }
+        });
+
+        document.getElementById('btn-start-multiplayer-game').addEventListener('click', () => {
+            this.startMultiplayerGame();
+        });
+
+        // Ludo Actions
+        document.getElementById('roll-dice-btn').addEventListener('click', () => this.ludo.rollDice());
+        document.getElementById('dice-3d').addEventListener('click', () => {
+            const color = this.ludo.getCurrentPlayerColor();
+            if (color && this.ludo.state.players[color].type !== 'ai') {
+                this.ludo.rollDice();
+            }
+        });
+
+        document.getElementById('reset-game-btn').addEventListener('click', () => {
+            if (confirm("Oyunu baştan açmak istediğinize emin misiniz?")) {
+                this.ludo.startLocalGame(this.ludo.state.players);
+            }
+        });
+        document.getElementById('end-game-btn').addEventListener('click', () => {
+            sessionStorage.removeItem('kizmabirader_state');
+            this.navigation.showPanel('hub-panel');
+        });
+
+        // SOS Actions
+        document.getElementById('sos-btn-s').addEventListener('click', () => {
+            this.sos.state.activeLetter = 'S';
+            document.getElementById('sos-btn-s').classList.add('active');
+            document.getElementById('sos-btn-o').classList.remove('active');
+        });
+        document.getElementById('sos-btn-o').addEventListener('click', () => {
+            this.sos.state.activeLetter = 'O';
+            document.getElementById('sos-btn-o').classList.add('active');
+            document.getElementById('sos-btn-s').classList.remove('active');
+        });
+
+        document.getElementById('sos-reset-btn').addEventListener('click', () => {
+            if (confirm("SOS oyununu yeniden başlatmak ister misiniz?")) {
+                this.sos.startLocalGame(this.sos.state.boardSize, this.sos.state.player2Type);
+            }
+        });
+        document.getElementById('sos-end-btn').addEventListener('click', () => {
+            sessionStorage.removeItem('sos_state');
+            this.navigation.showPanel('hub-panel');
+        });
+
+        // Setup starts
+        document.getElementById('start-game-btn').addEventListener('click', () => {
+            const config = {};
+            COLORS.forEach(c => {
+                const type = document.querySelector(`input[name="player-${c}"]:checked`).value;
+                config[c] = { type, finished: 0 };
+            });
+            const active = Object.keys(config).filter(c => config[c].type !== 'none');
+            if (active.length < 2) return alert("En az 2 aktif oyuncu seçmelisiniz!");
+            
+            this.navigation.showPanel('game-panel');
+            this.ludo.startLocalGame(config);
+        });
+
+        document.getElementById('sos-start-btn').addEventListener('click', () => {
+            const size = parseInt(document.querySelector('input[name="sos-size"]:checked').value);
+            const opponent = document.querySelector('input[name="sos-player2"]:checked').value;
+            this.navigation.showPanel('sos-game-panel');
+            this.sos.startLocalGame(size, opponent);
+        });
+
+        document.getElementById('new-game-btn').addEventListener('click', () => {
+            document.getElementById('winner-modal').classList.add('hidden');
+            this.navigation.showPanel('hub-panel');
+        });
+    }
+
+    updateSwitcherUI() {
+        const container = document.getElementById('profiles-list-container');
+        container.innerHTML = '';
+        this.accounts.accounts.forEach(acc => {
+            const item = document.createElement('div');
+            item.className = `profile-item ${acc.username === this.accounts.activeUsername ? 'active-profile' : ''}`;
+            const ratio = acc.played > 0 ? Math.round((acc.wins / acc.played) * 100) : 0;
+            
+            item.innerHTML = `
+                <div class="profile-item-info">
+                    <div class="profile-item-avatar theme-${acc.color}" style="background: var(--color-${acc.color}); box-shadow: 0 0 10px var(--color-${acc.color});">
+                        <i class="fa-solid ${acc.avatar}"></i>
+                    </div>
+                    <div>
+                        <div class="profile-item-name">${acc.username}</div>
+                        <div class="profile-item-stats">Maç: ${acc.played} | Galibiyet: ${acc.wins} (%${ratio})</div>
+                    </div>
+                </div>
+                ${this.accounts.accounts.length > 1 ? `<button class="profile-item-delete" title="Profili Sil"><i class="fa-solid fa-trash"></i></button>` : ''}
+            `;
+
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.profile-item-delete')) return;
+                this.accounts.activeUsername = acc.username;
+                this.accounts.save();
+                document.getElementById('profile-switch-modal').classList.add('hidden');
+            });
+
+            const del = item.querySelector('.profile-item-delete');
+            if (del) {
+                del.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`"${acc.username}" silinecektir. Emin misiniz?`)) {
+                        this.accounts.deleteProfile(acc.username);
+                        this.updateSwitcherUI();
+                        if (this.accounts.accounts.length === 0) {
+                            document.getElementById('profile-switch-modal').classList.add('hidden');
+                            document.getElementById('reg-cancel-btn').classList.add('hidden');
+                            this.navigation.showPanel('profile-setup-panel');
+                        }
+                    }
+                });
+            }
+            container.appendChild(item);
+        });
+    }
+
+    openMultiplayerLobby(gameName) {
+        this.firebase.gameName = gameName;
+        document.getElementById('lobby-game-name').innerText = gameName === 'ludo' ? 'Kızma Birader' : 'SOS Oyunu';
+        document.getElementById('lobby-room-details').classList.add('hidden');
+        document.getElementById('join-room-code-input').value = '';
+        this.navigation.showPanel('multiplayer-lobby-panel');
+    }
+
+    setupMultiplayerSync() {
+        this.firebase.onPlayersChanged = (players) => {
+            const ul = document.getElementById('room-players-ul');
+            ul.innerHTML = '';
+            const playerKeys = Object.keys(players);
+            
+            playerKeys.forEach(k => {
+                const p = players[k];
+                const li = document.createElement('li');
+                li.style.display = 'flex';
+                li.style.alignItems = 'center';
+                li.style.gap = '10px';
+                li.style.padding = '8px';
+                li.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                li.innerHTML = `
+                    <span style="color:var(--color-${p.color});"><i class="fa-solid ${p.avatar}"></i></span>
+                    <span>${p.username} ${k === 'player1' ? '<strong style="color:var(--color-yellow); font-size:0.8rem;">(Kurucu)</strong>' : ''}</span>
+                `;
+                ul.appendChild(li);
+            });
+
+            // Start button control (Host controls this, minimum 2 players)
+            const startBtn = document.getElementById('btn-start-multiplayer-game');
+            if (this.firebase.myPlayerKey === 'player1') {
+                startBtn.classList.remove('hidden');
+                startBtn.disabled = playerKeys.length < 2;
+            } else {
+                startBtn.classList.add('hidden');
+            }
+        };
+
+        this.firebase.onRoomStateChanged = (roomVal) => {
+            if (roomVal.status === 'playing' && roomVal.state) {
+                if (this.firebase.gameName === 'ludo') {
+                    if (document.getElementById('game-panel').classList.contains('hidden')) {
+                        this.navigation.showPanel('game-panel');
+                    }
+                    this.ludo.state = roomVal.state;
+                    this.ludo.render();
+                    this.ludo.checkAndTriggerAI();
+                } else if (this.firebase.gameName === 'sos') {
+                    if (document.getElementById('sos-game-panel').classList.contains('hidden')) {
+                        this.navigation.showPanel('sos-game-panel');
+                    }
+                    this.sos.state = roomVal.state;
+                    this.sos.render();
+                    this.sos.checkAndTriggerAI();
+                }
+            }
+        };
+    }
+
+    startMultiplayerGame() {
+        if (this.firebase.myPlayerKey !== 'player1') return;
+
+        if (this.firebase.gameName === 'ludo') {
+            const playersConfig = {};
+            const dbPlayers = [];
+            
+            this.firebase.roomRef.child('players').once('value', (snapshot) => {
+                const players = snapshot.val();
+                
+                // Red = player1, Green = player2, Yellow = player3, Blue = player4
+                playersConfig['red'] = players.player1 ? { type: 'human', finished: 0, playerKey: 'player1', username: players.player1.username } : { type: 'none' };
+                playersConfig['green'] = players.player2 ? { type: 'human', finished: 0, playerKey: 'player2', username: players.player2.username } : { type: 'none' };
+                playersConfig['yellow'] = players.player3 ? { type: 'human', finished: 0, playerKey: 'player3', username: players.player3.username } : { type: 'none' };
+                playersConfig['blue'] = players.player4 ? { type: 'human', finished: 0, playerKey: 'player4', username: players.player4.username } : { type: 'none' };
+                
+                const activeColors = Object.keys(playersConfig).filter(c => playersConfig[c].type !== 'none');
+                
+                const tokensObj = {};
+                COLORS.forEach(color => {
+                    tokensObj[color] = Array.from({ length: 4 }, (_, i) => ({
+                        id: i,
+                        posType: 'base',
+                        posIndex: i
+                    }));
+                });
+
+                const initialState = {
+                    players: playersConfig,
+                    activePlayers: activeColors,
+                    currentTurnIndex: 0,
+                    diceVal: null,
+                    hasRolled: false,
+                    extraTurn: false,
+                    tokens: tokensObj
+                };
+
+                this.firebase.roomRef.update({
+                    status: 'playing',
+                    state: initialState
+                });
+            });
+
+        } else if (this.firebase.gameName === 'sos') {
+            const initialState = {
+                boardSize: 4,
+                player2Type: 'human',
+                board: Array.from({ length: 16 }, () => ({ char: '', owner: null })),
+                currentPlayer: 1,
+                scores: { 1: 0, 2: 0 },
+                activeLetter: 'S',
+                completedSOS: []
+            };
+
+            this.firebase.roomRef.update({
+                status: 'playing',
+                state: initialState
             });
         }
-        
-        profilesListContainer.appendChild(item);
-    });
+    }
 }
 
-// ---------------- PLATFORM RUN ON INIT ----------------
-
-loadProfileStats();
-loadGameState();
-loadSOSState();
-
-
+// Global App Instance
+let gamePlatformApp = null;
+window.addEventListener('load', () => {
+    gamePlatformApp = new App();
+    gamePlatformApp.init();
+});
