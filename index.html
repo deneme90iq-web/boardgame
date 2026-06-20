@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kızma Birader - Premium Digital Edition</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Background Decorative Elements -->
+        <div class="glow-bg glow-1"></div>
+        <div class="glow-bg glow-2"></div>
+
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo" id="logo-back-to-hub" style="cursor: pointer;" title="Ana Sayfaya Dön">
+                <i class="fa-solid fa-dice logo-icon"></i>
+                <h1>BoardGame <span>Hub</span></h1>
+            </div>
+            <div class="header-actions">
+                <button id="firebase-config-btn" class="icon-btn" title="Firebase Bağlantısı"><i class="fa-solid fa-database"></i></button>
+                <button id="rules-btn" class="icon-btn" title="Oyun Kuralları"><i class="fa-solid fa-book-open"></i></button>
+                <button id="sound-btn" class="icon-btn" title="Ses Aç/Kapa"><i class="fa-solid fa-volume-high"></i></button>
+                <button id="theme-btn" class="icon-btn" title="Temayı Değiştir"><i class="fa-solid fa-moon"></i></button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Profile Creation / Login Panel -->
+            <section id="profile-setup-panel" class="glass-card panel hidden">
+                <div class="setup-header">
+                    <h2><i class="fa-solid fa-user-plus title-icon"></i> Profil Oluştur</h2>
+                </div>
+                <p class="subtitle">Masa oyunu platformu için bir oyuncu profili oluşturun.</p>
+                
+                <div class="profile-form">
+                    <div class="form-group">
+                        <label for="reg-username">Kullanıcı Adı</label>
+                        <input type="text" id="reg-username" placeholder="Kullanıcı adınızı girin..." maxlength="15">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Avatar Seçin</label>
+                        <div class="avatar-options-grid">
+                            <label class="avatar-opt">
+                                <input type="radio" name="reg-avatar" value="fa-user-astronaut" checked>
+                                <span><i class="fa-solid fa-user-astronaut"></i></span>
+                            </label>
+                            <label class="avatar-opt">
+                                <input type="radio" name="reg-avatar" value="fa-ninja">
+                                <span><i class="fa-solid fa-ninja"></i></span>
+                            </label>
+                            <label class="avatar-opt">
+                                <input type="radio" name="reg-avatar" value="fa-robot">
+                                <span><i class="fa-solid fa-robot"></i></span>
+                            </label>
+                            <label class="avatar-opt">
+                                <input type="radio" name="reg-avatar" value="fa-dragon">
+                                <span><i class="fa-solid fa-dragon"></i></span>
+                            </label>
+                            <label class="avatar-opt">
+                                <input type="radio" name="reg-avatar" value="fa-ghost">
+                                <span><i class="fa-solid fa-ghost"></i></span>
+                            </label>
+                            <label class="avatar-opt">
+                                <input type="radio" name="reg-avatar" value="fa-user-ninja">
+                                <span><i class="fa-solid fa-user-ninja"></i></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Avatar Renk Teması</label>
+                        <div class="color-options-grid">
+                            <label class="color-opt red-opt" style="--opt-color: var(--color-red);">
+                                <input type="radio" name="reg-color" value="red" checked>
+                                <span></span>
+                            </label>
+                            <label class="color-opt blue-opt" style="--opt-color: var(--color-blue);">
+                                <input type="radio" name="reg-color" value="blue">
+                                <span></span>
+                            </label>
+                            <label class="color-opt green-opt" style="--opt-color: var(--color-green);">
+                                <input type="radio" name="reg-color" value="green">
+                                <span></span>
+                            </label>
+                            <label class="color-opt yellow-opt" style="--opt-color: var(--color-yellow);">
+                                <input type="radio" name="reg-color" value="yellow">
+                                <span></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-actions">
+                    <button id="reg-submit-btn" class="primary-btn"><i class="fa-solid fa-user-check"></i> Profili Kaydet</button>
+                    <button id="reg-cancel-btn" class="secondary-btn hidden">İptal</button>
+                </div>
+            </section>
+
+            <!-- Hub / Game Lobby (Visible on start) -->
+            <section id="hub-panel" class="glass-card panel">
+                <div class="hub-header">
+                    <h2><i class="fa-solid fa-gamepad title-icon"></i> Oyun Odası</h2>
+                    <p class="subtitle">Oynamak istediğiniz klasik masa oyununu seçin.</p>
+                </div>
+                
+                <div class="hub-layout">
+                    <!-- Profile Stats -->
+                    <div class="profile-card glass-card">
+                        <div class="avatar-section">
+                            <div id="profile-avatar-display" class="profile-avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                            <h3 id="profile-name">Oyuncu 1</h3>
+                        </div>
+                        <div class="profile-stats">
+                            <div class="stat-box">
+                                <span class="stat-val" id="stats-played">0</span>
+                                <span class="stat-lbl">Oynanan</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-val" id="stats-wins">0</span>
+                                <span class="stat-lbl">Kazanılan</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-val" id="stats-ratio">0%</span>
+                                <span class="stat-lbl">Kazanma Oranı</span>
+                            </div>
+                        </div>
+                        <div class="profile-actions" style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                            <button id="hub-switch-profile-btn" class="secondary-btn sm-btn" style="width: 100%;"><i class="fa-solid fa-users"></i> Profil Değiştir</button>
+                            <button id="hub-new-profile-btn" class="secondary-btn sm-btn" style="width: 100%;"><i class="fa-solid fa-user-plus"></i> Yeni Profil Ekle</button>
+                        </div>
+                    </div>
+
+                    <!-- Game Selection Cards -->
+                    <div class="game-cards-grid">
+                        <!-- Kızma Birader Card -->
+                        <div class="game-card active-card" id="card-ludo">
+                            <div class="game-card-icon"><i class="fa-solid fa-circle-dot red-theme"></i><i class="fa-solid fa-circle-dot blue-theme"></i></div>
+                            <div class="game-card-info">
+                                <h3>Kızma Birader</h3>
+                                <p>Klasik 4 oyunculu Ludo oyunu. AI veya insanlarla mücadele edin.</p>
+                            </div>
+                            <div class="game-card-action" style="display:flex; gap:10px;">
+                                <button id="btn-play-ludo-local" class="primary-btn sm-btn" style="flex:1;">Lokal</button>
+                                <button id="btn-play-ludo-online" class="primary-btn sm-btn" style="flex:1; background:linear-gradient(135deg, var(--color-blue), var(--color-purple));">Çevrimiçi</button>
+                            </div>
+                        </div>
+
+                        <!-- SOS Game Card -->
+                        <div class="game-card active-card" id="card-sos">
+                            <div class="game-card-icon"><i class="fa-solid fa-square-poll-horizontal text-neon"></i></div>
+                            <div class="game-card-info">
+                                <h3>SOS Oyunu</h3>
+                                <p>S ve O harflerini yatay, dikey ya da çapraz eşleştirin, en çok puanı toplayın!</p>
+                            </div>
+                            <div class="game-card-action" style="display:flex; gap:10px;">
+                                <button id="btn-play-sos-local" class="primary-btn sm-btn" style="flex:1;">Lokal</button>
+                                <button id="btn-play-sos-online" class="primary-btn sm-btn" style="flex:1; background:linear-gradient(135deg, var(--color-blue), var(--color-purple));">Çevrimiçi</button>
+                            </div>
+                        </div>
+
+                        <!-- Coming Soon: Dama -->
+                        <div class="game-card locked-card">
+                            <div class="game-card-icon"><i class="fa-solid fa-chess-board opacity-5"></i></div>
+                            <div class="game-card-info">
+                                <h3>Dama</h3>
+                                <p>Geleneksel Türk Daması ve Çapraz Dama.</p>
+                            </div>
+                            <span class="badge">Yakında</span>
+                        </div>
+
+                        <!-- Coming Soon: Tavla -->
+                        <div class="game-card locked-card">
+                            <div class="game-card-icon"><i class="fa-solid fa-dice-d20 opacity-5"></i></div>
+                            <div class="game-card-info">
+                                <h3>Tavla</h3>
+                                <p>Usta tavlacılar için zar ve strateji oyunu.</p>
+                            </div>
+                            <span class="badge">Yakında</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Setup & Config Card for Kızma Birader -->
+            <section id="setup-panel" class="glass-card panel hidden">
+                <div class="setup-header">
+                    <h2><i class="fa-solid fa-sliders title-icon"></i> Kızma Birader Kurulumu</h2>
+                    <button id="ludo-setup-back-btn" class="icon-btn back-btn" title="Geri Dön"><i class="fa-solid fa-arrow-left"></i> Geri Dön</button>
+                </div>
+                <p class="subtitle">Oyuna katılacak oyuncuları ve tiplerini belirleyin (En az 2 oyuncu aktif olmalıdır).</p>
+                
+                <div class="player-selectors">
+                    <!-- Red Player -->
+                    <div class="player-select-card red-theme">
+                        <div class="color-badge"><i class="fa-solid fa-circle"></i> Kırmızı (K)</div>
+                        <div class="select-options">
+                            <label class="option-btn">
+                                <input type="radio" name="player-red" value="human" checked>
+                                <span class="custom-radio"><i class="fa-solid fa-user"></i> İnsan</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-red" value="ai">
+                                <span class="custom-radio"><i class="fa-solid fa-robot"></i> Yapay Zeka</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-red" value="none">
+                                <span class="custom-radio"><i class="fa-solid fa-ban"></i> Yok</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Green Player -->
+                    <div class="player-select-card green-theme">
+                        <div class="color-badge"><i class="fa-solid fa-circle"></i> Yeşil (Y)</div>
+                        <div class="select-options">
+                            <label class="option-btn">
+                                <input type="radio" name="player-green" value="human" checked>
+                                <span class="custom-radio"><i class="fa-solid fa-user"></i> İnsan</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-green" value="ai">
+                                <span class="custom-radio"><i class="fa-solid fa-robot"></i> Yapay Zeka</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-green" value="none">
+                                <span class="custom-radio"><i class="fa-solid fa-ban"></i> Yok</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Yellow Player -->
+                    <div class="player-select-card yellow-theme">
+                        <div class="color-badge"><i class="fa-solid fa-circle"></i> Sarı (S)</div>
+                        <div class="select-options">
+                            <label class="option-btn">
+                                <input type="radio" name="player-yellow" value="human" checked>
+                                <span class="custom-radio"><i class="fa-solid fa-user"></i> İnsan</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-yellow" value="ai">
+                                <span class="custom-radio"><i class="fa-solid fa-robot"></i> Yapay Zeka</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-yellow" value="none">
+                                <span class="custom-radio"><i class="fa-solid fa-ban"></i> Yok</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Blue Player -->
+                    <div class="player-select-card blue-theme">
+                        <div class="color-badge"><i class="fa-solid fa-circle"></i> Mavi (M)</div>
+                        <div class="select-options">
+                            <label class="option-btn">
+                                <input type="radio" name="player-blue" value="human">
+                                <span class="custom-radio"><i class="fa-solid fa-user"></i> İnsan</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-blue" value="ai" checked>
+                                <span class="custom-radio"><i class="fa-solid fa-robot"></i> Yapay Zeka</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="player-blue" value="none">
+                                <span class="custom-radio"><i class="fa-solid fa-ban"></i> Yok</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-actions">
+                    <button id="start-game-btn" class="primary-btn"><i class="fa-solid fa-play"></i> Oyunu Başlat</button>
+                </div>
+            </section>
+
+            <!-- SOS Game Setup Panel -->
+            <section id="sos-setup-panel" class="glass-card panel hidden">
+                <div class="setup-header">
+                    <h2><i class="fa-solid fa-sliders title-icon"></i> SOS Kurulumu</h2>
+                    <button id="sos-setup-back-btn" class="icon-btn back-btn" title="Geri Dön"><i class="fa-solid fa-arrow-left"></i> Geri Dön</button>
+                </div>
+                <p class="subtitle">Tablo boyutunu ve 2. oyuncunun tipini seçin.</p>
+                
+                <div class="sos-options">
+                    <div class="option-card-row">
+                        <div class="option-title">Tahta Boyutu</div>
+                        <div class="size-selector-group">
+                            <label class="size-btn">
+                                <input type="radio" name="sos-size" value="3">
+                                <span>3x3</span>
+                            </label>
+                            <label class="size-btn">
+                                <input type="radio" name="sos-size" value="4" checked>
+                                <span>4x4</span>
+                            </label>
+                            <label class="size-btn">
+                                <input type="radio" name="sos-size" value="5">
+                                <span>5x5</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="option-card-row">
+                        <div class="option-title">Rakip Seçimi</div>
+                        <div class="select-options">
+                            <label class="option-btn">
+                                <input type="radio" name="sos-player2" value="ai" checked>
+                                <span class="custom-radio"><i class="fa-solid fa-robot"></i> Yapay Zeka</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="sos-player2" value="human">
+                                <span class="custom-radio"><i class="fa-solid fa-user"></i> İnsan</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-actions">
+                    <button id="sos-start-btn" class="primary-btn"><i class="fa-solid fa-play"></i> SOS Başlat</button>
+                </div>
+            </section>
+
+            <!-- Game Active Layout (Kızma Birader) -->
+            <section id="game-panel" class="game-layout hidden">
+                <!-- Sidebar Controls / Stats -->
+                <div class="game-sidebar">
+                    <!-- Turn Status Card -->
+                    <div class="glass-card status-card">
+                        <div class="turn-indicator">
+                            <h3>Sıra Kimde?</h3>
+                            <div id="current-player-display" class="player-badge">
+                                <span class="color-dot"></span>
+                                <span class="player-name">Hazırlanıyor...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Dice Controller -->
+                        <div class="dice-section">
+                            <div class="dice-container">
+                                <div id="dice-3d" class="dice">
+                                    <div class="face front"><span class="pip"></span></div>
+                                    <div class="face back">
+                                        <span class="pip"></span><span class="pip"></span>
+                                        <span class="pip"></span><span class="pip"></span>
+                                        <span class="pip"></span><span class="pip"></span>
+                                    </div>
+                                    <div class="face right">
+                                        <span class="pip"></span><span class="pip"></span>
+                                        <span class="pip"></span>
+                                    </div>
+                                    <div class="face left">
+                                        <span class="pip"></span><span class="pip"></span>
+                                        <span class="pip"></span><span class="pip"></span>
+                                    </div>
+                                    <div class="face top">
+                                        <span class="pip"></span><span class="pip"></span>
+                                    </div>
+                                    <div class="face bottom">
+                                        <span class="pip"></span><span class="pip"></span>
+                                        <span class="pip"></span><span class="pip"></span>
+                                        <span class="pip"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dice-actions">
+                                <button id="roll-dice-btn" class="primary-btn hidden">Zar At</button>
+                                <div id="roll-result-badge" class="result-badge hidden">6</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Player Status / Standings -->
+                    <div class="glass-card stats-card">
+                        <h3>Oyuncu Durumları</h3>
+                        <div class="player-ranks">
+                            <div id="status-red" class="rank-row red-theme">
+                                <span class="p-status"><i class="fa-solid fa-user"></i> Kırmızı</span>
+                                <span class="p-progress">Bitiş: 0/4</span>
+                            </div>
+                            <div id="status-green" class="rank-row green-theme">
+                                <span class="p-status"><i class="fa-solid fa-user"></i> Yeşil</span>
+                                <span class="p-progress">Bitiş: 0/4</span>
+                            </div>
+                            <div id="status-yellow" class="rank-row yellow-theme">
+                                <span class="p-status"><i class="fa-solid fa-user"></i> Sarı</span>
+                                <span class="p-progress">Bitiş: 0/4</span>
+                            </div>
+                            <div id="status-blue" class="rank-row blue-theme">
+                                <span class="p-status"><i class="fa-solid fa-user"></i> Mavi</span>
+                                <span class="p-progress">Bitiş: 0/4</span>
+                            </div>
+                        </div>
+                        <div class="sidebar-buttons">
+                            <button id="reset-game-btn" class="secondary-btn" title="Mevcut oyuncularla oyunu baştan açar"><i class="fa-solid fa-rotate-left"></i> Yeniden Başlat</button>
+                            <button id="end-game-btn" class="secondary-btn danger-btn" title="Oyunu bitirip kurulum ekranına döner"><i class="fa-solid fa-flag"></i> Oyunu Bitir</button>
+                        </div>
+                    </div>
+
+                    <!-- Game History Log -->
+                    <div class="glass-card history-card">
+                        <h3>Oyun Günlüğü</h3>
+                        <div id="game-log" class="game-log-content">
+                            <div class="log-entry system"><i class="fa-solid fa-circle-info"></i> Oyun ayarlandı. Başlamaya hazır!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ludo Board Container -->
+                <div class="board-wrapper">
+                    <div id="ludo-board" class="ludo-board">
+                        <!-- Grid cells will be generated & mapped dynamically in javascript/CSS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SOS Game Active Layout -->
+            <section id="sos-game-panel" class="game-layout hidden">
+                <div class="game-sidebar">
+                    <!-- SOS Score Card -->
+                    <div class="glass-card status-card">
+                        <h3>SOS Skor Durumu</h3>
+                        <div class="sos-players-status">
+                            <div id="sos-status-p1" class="player-badge active-turn">
+                                <span class="color-dot" style="background-color: var(--color-red);"></span>
+                                <span class="player-name">Oyuncu 1: 0 SOS</span>
+                            </div>
+                            <div id="sos-status-p2" class="player-badge">
+                                <span class="color-dot" style="background-color: var(--color-blue);"></span>
+                                <span class="player-name">Oyuncu 2 (Yapay Zeka): 0 SOS</span>
+                            </div>
+                        </div>
+                        
+                        <div class="turn-indicator sos-turn-info" style="margin-top: 15px;">
+                            <h3>Sıra Kimde?</h3>
+                            <div id="sos-turn-badge" class="player-badge">Oyuncu 1</div>
+                        </div>
+                    </div>
+
+                    <!-- SOS Letter Selector -->
+                    <div class="glass-card action-card">
+                        <h3>Harf Seçimi</h3>
+                        <div class="letter-select-group">
+                            <button id="sos-btn-s" class="letter-btn active">S</button>
+                            <button id="sos-btn-o" class="letter-btn">O</button>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar controls -->
+                    <div class="glass-card stats-card">
+                        <div class="sidebar-buttons">
+                            <button id="sos-reset-btn" class="secondary-btn"><i class="fa-solid fa-rotate-left"></i> Yeniden Başlat</button>
+                            <button id="sos-end-btn" class="secondary-btn danger-btn"><i class="fa-solid fa-flag"></i> Oyunu Bitir</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SOS Grid Area -->
+                <div class="board-wrapper">
+                    <div id="sos-grid-container" class="sos-grid-container">
+                        <!-- SOS cells generated dynamically -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Multiplayer Lobby Panel -->
+            <section id="multiplayer-lobby-panel" class="glass-card panel hidden">
+                <div class="setup-header">
+                    <h2><i class="fa-solid fa-globe title-icon"></i> Çevrimiçi Lobi (<span id="lobby-game-name">Kızma Birader</span>)</h2>
+                    <button id="multiplayer-lobby-back-btn" class="icon-btn back-btn" title="Geri Dön"><i class="fa-solid fa-arrow-left"></i> Geri Dön</button>
+                </div>
+                
+                <div class="lobby-columns">
+                    <div class="lobby-action-box glass-card">
+                        <h3>Oda İşlemleri</h3>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <button id="btn-create-room" class="primary-btn" style="width: 100%; margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Yeni Oda Oluştur</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Bir Odaya Katıl</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="join-room-code-input" placeholder="Oda Kodu (örn: AX72F1)" maxlength="6" style="flex: 1; text-transform: uppercase;">
+                                <button id="btn-join-room" class="primary-btn sm-btn"><i class="fa-solid fa-right-to-bracket"></i> Katıl</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="lobby-room-details" class="lobby-room-details glass-card hidden" style="margin-top:20px; padding:20px; width:100%;">
+                        <h3>Oda Detayları: <span id="room-code-display" class="highlight">------</span></h3>
+                        <p class="subtitle" style="margin-bottom: 15px;">Kodu arkadaşlarınızla paylaşın. Herkes hazır olduğunda oyunu başlatın.</p>
+                        
+                        <div class="room-players-list">
+                            <h4>Bağlı Oyuncular</h4>
+                            <ul id="room-players-ul" class="players-list" style="list-style:none; padding:0;">
+                                <!-- Connected players rendered dynamically -->
+                            </ul>
+                        </div>
+                        
+                        <div class="setup-actions" style="margin-top: 20px;">
+                            <button id="btn-start-multiplayer-game" class="primary-btn" style="width: 100%;" disabled><i class="fa-solid fa-play"></i> Oyunu Başlat</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Rules Drawer Modal -->
+        <div id="rules-modal" class="modal hidden">
+            <div class="modal-content glass-card">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-book-open"></i> Oyun Kuralları</h2>
+                    <button id="close-rules-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="rules-modal-body" class="modal-body">
+                    <!-- Loaded dynamically based on the current context -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Winner Modal -->
+        <div id="winner-modal" class="modal hidden">
+            <div class="modal-content glass-card celebration-card">
+                <div class="celebration-icon"><i class="fa-solid fa-trophy text-gold"></i></div>
+                <h2 id="winner-title">Tebrikler!</h2>
+                <p id="winner-text">Oyunu Kırmızı kazandı!</p>
+                <button id="new-game-btn" class="primary-btn"><i class="fa-solid fa-rotate-left"></i> Yeni Oyun</button>
+            </div>
+        </div>
+
+        <!-- Profile Switcher Modal -->
+        <div id="profile-switch-modal" class="modal hidden">
+            <div class="modal-content glass-card" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-users"></i> Profil Seçin</h2>
+                    <button id="close-profile-switch-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div id="profiles-list-container" class="profiles-list">
+                        <!-- Profile list items generated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Firebase Config Modal -->
+        <div id="firebase-config-modal" class="modal hidden">
+            <div class="modal-content glass-card" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-database"></i> Firebase Kurulumu</h2>
+                    <button id="close-firebase-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p class="subtitle" style="margin-bottom: 12px;">Çevrimiçi multiplayer modu aktif etmek için Firebase Web SDK Config JSON nesnesini yapıştırın.</p>
+                    <div class="form-group">
+                        <textarea id="firebase-config-input" rows="8" placeholder='{&#10;  "apiKey": "...",&#10;  "databaseURL": "...",&#10;  "projectId": "...",&#10;  ...&#10;}' style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; padding:10px; font-family:monospace; resize:vertical; outline:none;"></textarea>
+                    </div>
+                    <div class="setup-actions" style="margin-top:15px;">
+                        <button id="save-firebase-btn" class="primary-btn" style="width:100%;"><i class="fa-solid fa-save"></i> Yapılandırmayı Kaydet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script file -->
+    <script src="app.js"></script>
+</body>
+</html>
