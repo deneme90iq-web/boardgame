@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
@@ -40,73 +41,89 @@
         <main class="main-content">
             <!-- Profile Creation / Login Panel -->
             <section id="profile-setup-panel" class="glass-card panel hidden">
-                <div class="setup-header">
-                    <h2><i class="fa-solid fa-user-plus title-icon"></i> Profil Oluştur</h2>
+                <div class="setup-header" style="display:flex; flex-direction:column; gap:10px;">
+                    <div class="auth-tabs" style="display:flex; gap:15px; margin-bottom:10px;">
+                        <button id="tab-login" class="tab-btn active" style="flex:1; padding:12px; font-weight:600; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; cursor:pointer; transition:all 0.2s;">Giriş Yap</button>
+                        <button id="tab-register" class="tab-btn" style="flex:1; padding:12px; font-weight:600; background:transparent; border:1px solid transparent; border-radius:8px; color:var(--text-secondary); cursor:pointer; transition:all 0.2s;">Kayıt Ol</button>
+                    </div>
+                    <h2 id="auth-title"><i class="fa-solid fa-right-to-bracket title-icon"></i> Hesabınıza Giriş Yapın</h2>
                 </div>
-                <p class="subtitle">Masa oyunu platformu için bir oyuncu profili oluşturun.</p>
+                <p id="auth-subtitle" class="subtitle">Masa oyunu platformuna erişmek için bilgilerinizi girin.</p>
                 
                 <div class="profile-form">
                     <div class="form-group">
-                        <label for="reg-username">Kullanıcı Adı</label>
-                        <input type="text" id="reg-username" placeholder="Kullanıcı adınızı girin..." maxlength="15">
+                        <label for="auth-email">E-Posta Adresi</label>
+                        <input type="email" id="auth-email" placeholder="ornek@mail.com" required style="padding:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; font-size:1rem; outline:none; transition:border-color 0.2s;">
                     </div>
                     
                     <div class="form-group">
-                        <label>Avatar Seçin</label>
-                        <div class="avatar-options-grid">
-                            <label class="avatar-opt">
-                                <input type="radio" name="reg-avatar" value="fa-user-astronaut" checked>
-                                <span><i class="fa-solid fa-user-astronaut"></i></span>
-                            </label>
-                            <label class="avatar-opt">
-                                <input type="radio" name="reg-avatar" value="fa-ninja">
-                                <span><i class="fa-solid fa-ninja"></i></span>
-                            </label>
-                            <label class="avatar-opt">
-                                <input type="radio" name="reg-avatar" value="fa-robot">
-                                <span><i class="fa-solid fa-robot"></i></span>
-                            </label>
-                            <label class="avatar-opt">
-                                <input type="radio" name="reg-avatar" value="fa-dragon">
-                                <span><i class="fa-solid fa-dragon"></i></span>
-                            </label>
-                            <label class="avatar-opt">
-                                <input type="radio" name="reg-avatar" value="fa-ghost">
-                                <span><i class="fa-solid fa-ghost"></i></span>
-                            </label>
-                            <label class="avatar-opt">
-                                <input type="radio" name="reg-avatar" value="fa-user-ninja">
-                                <span><i class="fa-solid fa-user-ninja"></i></span>
-                            </label>
-                        </div>
+                        <label for="auth-password">Şifre</label>
+                        <input type="password" id="auth-password" placeholder="••••••••" minlength="6" required style="padding:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; font-size:1rem; outline:none; transition:border-color 0.2s;">
                     </div>
 
-                    <div class="form-group">
-                        <label>Avatar Renk Teması</label>
-                        <div class="color-options-grid">
-                            <label class="color-opt red-opt" style="--opt-color: var(--color-red);">
-                                <input type="radio" name="reg-color" value="red" checked>
-                                <span></span>
-                            </label>
-                            <label class="color-opt blue-opt" style="--opt-color: var(--color-blue);">
-                                <input type="radio" name="reg-color" value="blue">
-                                <span></span>
-                            </label>
-                            <label class="color-opt green-opt" style="--opt-color: var(--color-green);">
-                                <input type="radio" name="reg-color" value="green">
-                                <span></span>
-                            </label>
-                            <label class="color-opt yellow-opt" style="--opt-color: var(--color-yellow);">
-                                <input type="radio" name="reg-color" value="yellow">
-                                <span></span>
-                            </label>
+                    <!-- Registration fields (only visible when Register mode is active) -->
+                    <div id="register-fields-group" class="hidden" style="display:flex; flex-direction:column; gap:20px;">
+                        <div class="form-group">
+                            <label for="reg-username">Kullanıcı Adı</label>
+                            <input type="text" id="reg-username" placeholder="Kullanıcı adınızı girin..." maxlength="15">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Avatar Seçin</label>
+                            <div class="avatar-options-grid">
+                                <label class="avatar-opt">
+                                    <input type="radio" name="reg-avatar" value="fa-user-astronaut" checked>
+                                    <span><i class="fa-solid fa-user-astronaut"></i></span>
+                                </label>
+                                <label class="avatar-opt">
+                                    <input type="radio" name="reg-avatar" value="fa-ninja">
+                                    <span><i class="fa-solid fa-ninja"></i></span>
+                                </label>
+                                <label class="avatar-opt">
+                                    <input type="radio" name="reg-avatar" value="fa-robot">
+                                    <span><i class="fa-solid fa-robot"></i></span>
+                                </label>
+                                <label class="avatar-opt">
+                                    <input type="radio" name="reg-avatar" value="fa-dragon">
+                                    <span><i class="fa-solid fa-dragon"></i></span>
+                                </label>
+                                <label class="avatar-opt">
+                                    <input type="radio" name="reg-avatar" value="fa-ghost">
+                                    <span><i class="fa-solid fa-ghost"></i></span>
+                                </label>
+                                <label class="avatar-opt">
+                                    <input type="radio" name="reg-avatar" value="fa-user-ninja">
+                                    <span><i class="fa-solid fa-user-ninja"></i></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Avatar Renk Teması</label>
+                            <div class="color-options-grid">
+                                <label class="color-opt red-opt" style="--opt-color: var(--color-red);">
+                                    <input type="radio" name="reg-color" value="red" checked>
+                                    <span></span>
+                                </label>
+                                <label class="color-opt blue-opt" style="--opt-color: var(--color-blue);">
+                                    <input type="radio" name="reg-color" value="blue">
+                                    <span></span>
+                                </label>
+                                <label class="color-opt green-opt" style="--opt-color: var(--color-green);">
+                                    <input type="radio" name="reg-color" value="green">
+                                    <span></span>
+                                </label>
+                                <label class="color-opt yellow-opt" style="--opt-color: var(--color-yellow);">
+                                    <input type="radio" name="reg-color" value="yellow">
+                                    <span></span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="setup-actions">
-                    <button id="reg-submit-btn" class="primary-btn"><i class="fa-solid fa-user-check"></i> Profili Kaydet</button>
-                    <button id="reg-cancel-btn" class="secondary-btn hidden">İptal</button>
+                    <button id="reg-submit-btn" class="primary-btn" style="width:100%;"><i class="fa-solid fa-right-to-bracket"></i> Giriş Yap</button>
                 </div>
             </section>
 
@@ -139,8 +156,8 @@
                             </div>
                         </div>
                         <div class="profile-actions" style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
-                            <button id="hub-switch-profile-btn" class="secondary-btn sm-btn" style="width: 100%;"><i class="fa-solid fa-users"></i> Profil Değiştir</button>
-                            <button id="hub-new-profile-btn" class="secondary-btn sm-btn" style="width: 100%;"><i class="fa-solid fa-user-plus"></i> Yeni Profil Ekle</button>
+                            <button id="hub-edit-profile-btn" class="secondary-btn sm-btn" style="width: 100%;"><i class="fa-solid fa-user-gear"></i> Profili Düzenle</button>
+                            <button id="hub-logout-btn" class="secondary-btn sm-btn danger-btn" style="width: 100%;"><i class="fa-solid fa-right-from-bracket"></i> Çıkış Yap</button>
                         </div>
                     </div>
 

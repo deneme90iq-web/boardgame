@@ -1,7 +1,21 @@
 /**
  * BoardGame Hub - Premium Digital Edition
- * Modularized OOP Architecture
+ * Modularized OOP Architecture with Firebase Auth & Sync
  */
+
+// ==========================================
+// Firebase Hardcoded Credentials
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCY1eQqfKoIITLaFyOwewm0m89E6qbwKMY",
+  authDomain: "boardgame-cceac.firebaseapp.com",
+  projectId: "boardgame-cceac",
+  storageBucket: "boardgame-cceac.firebasestorage.app",
+  messagingSenderId: "1030073907015",
+  appId: "1:1030073907015:web:dcaba01992327907133e62",
+  measurementId: "G-935RCBM7B4",
+  databaseURL: "https://boardgame-cceac-default-rtdb.firebaseio.com"
+};
 
 // ==========================================
 // 1. SOUND ENGINE (Web Audio API)
@@ -181,70 +195,118 @@ const COLOR_CONFIGS = {
 };
 
 // ==========================================
-// 3. ACCOUNT MANAGER (Profiles & Statistics)
+// 3. ACCOUNT MANAGER (Firebase Auth Integration)
 // ==========================================
 class AccountManager {
-    constructor() {
-        this.accounts = [];
-        this.activeUsername = "";
+    constructor(appRef) {
+        this.app = appRef;
+        this.currentUser = null;
+        this.profileData = null;
     }
 
-    load() {
-        const savedAccounts = localStorage.getItem('boardgame_hub_accounts');
-        const savedActive = localStorage.getItem('boardgame_hub_active_user');
+    async loadProfile(user) {
+        this.currentUser = user;
+        if (!user) {
+            this.profileData = null;
+            this.app.navigation.showPanel('profile-setup-panel');
+            this.resetAuthUI();
+            return;
+        }
+
+        // Fetch profile data from Firebase RTDB
+        const snapshot = await this.app.firebase.db.ref(`users/${user.uid}`).once('value');
+        const data = snapshot.val();
+        if (data) {
+            this.profileData = data;
+            this.app.navigation.showPanel('hub-panel');
+            this.updateProfileUI();
+        } else {
+            // User authenticated but needs to select username / avatar
+            this.app.navigation.showPanel('profile-setup-panel');
+            document.getElementById('register-fields-group').classList.remove('hidden');
+            document.getElementById('auth-title').innerHTML = '<i class="fa-solid fa-user-plus title-icon"></i> Profil Oluştur';
+            document.getElementById('auth-subtitle').innerText = 'Hesabınız oluşturuldu! Profil detaylarınızı seçin.';
+            
+            // Hide login specific elements
+            document.getElementById('auth-email').closest('.form-group').classList.add('hidden');
+            document.getElementById('auth-password').closest('.form-group').classList.add('hidden');
+            document.querySelector('.auth-tabs').classList.add('hidden');
+            
+            const submitBtn = document.getElementById('reg-submit-btn');
+            submitBtn.innerHTML = '<i class="fa-solid fa-user-check"></i> Profili Kaydet';
+            submitBtn.dataset.authMode = 'profile-setup';
+        }
+    }
+
+    async saveProfile(username, avatar, color) {
+        if (!this.currentUser) return;
         
-        if (savedAccounts) {
-            try { this.accounts = JSON.parse(savedAccounts); } catch(e) { this.accounts = []; }
-        }
-        if (savedActive) {
-            this.activeUsername = savedActive;
-        }
+        const data = {
+            username: username,
+            avatar: avatar,
+            color: color,
+            played: this.profileData ? (this.profileData.played || 0) : 0,
+            wins: this.profileData ? (this.profileData.wins || 0) : 0
+        };
+
+        await this.app.firebase.db.ref(`users/${this.currentUser.uid}`).set(data);
+        this.profileData = data;
+        this.updateProfileUI();
+        this.app.navigation.showPanel('hub-panel');
     }
 
-    save() {
-        localStorage.setItem('boardgame_hub_accounts', JSON.stringify(this.accounts));
-        localStorage.setItem('boardgame_hub_active_user', this.activeUsername);
+    async updateStats(won) {
+        if (!this.currentUser || !this.profileData) return;
+        this.profileData.played += 1;
+        if (won) {
+            this.profileData.wins += 1;
+        }
+        await this.app.firebase.db.ref(`users/${this.currentUser.uid}`).set(this.profileData);
         this.updateProfileUI();
     }
 
-    getActiveAccount() {
-        return this.accounts.find(a => a.username === this.activeUsername);
-    }
-
-    createProfile(username, avatar, color) {
-        let profile = this.accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
-        if (!profile) {
-            profile = { username, avatar, color, played: 0, wins: 0 };
-            this.accounts.push(profile);
-        } else {
-            profile.avatar = avatar;
-            profile.color = color;
-        }
-        this.activeUsername = profile.username;
-        this.save();
-    }
-
-    deleteProfile(username) {
-        this.accounts = this.accounts.filter(a => a.username !== username);
-        if (this.activeUsername === username && this.accounts.length > 0) {
-            this.activeUsername = this.accounts[0].username;
-        }
-        this.save();
-    }
-
     updateProfileUI() {
-        const account = this.getActiveAccount();
-        if (!account) return;
+        if (!this.profileData) return;
         
-        document.getElementById('profile-name').innerText = account.username;
+        document.getElementById('profile-name').innerText = this.profileData.username;
         const avatarDisplay = document.getElementById('profile-avatar-display');
-        avatarDisplay.className = `profile-avatar theme-${account.color}`;
-        avatarDisplay.innerHTML = `<i class="fa-solid ${account.avatar}"></i>`;
+        avatarDisplay.className = `profile-avatar theme-${this.profileData.color}`;
+        avatarDisplay.innerHTML = `<i class="fa-solid ${this.profileData.avatar}"></i>`;
         
-        document.getElementById('stats-played').innerText = account.played;
-        document.getElementById('stats-wins').innerText = account.wins;
-        const ratio = account.played > 0 ? Math.round((account.wins / account.played) * 100) : 0;
+        document.getElementById('stats-played').innerText = this.profileData.played;
+        document.getElementById('stats-wins').innerText = this.profileData.wins;
+        const ratio = this.profileData.played > 0 ? Math.round((this.profileData.wins / this.profileData.played) * 100) : 0;
         document.getElementById('stats-ratio').innerText = ratio + '%';
+    }
+
+    resetAuthUI() {
+        document.getElementById('auth-email').closest('.form-group').classList.remove('hidden');
+        document.getElementById('auth-password').closest('.form-group').classList.remove('hidden');
+        document.querySelector('.auth-tabs').classList.remove('hidden');
+        
+        const submitBtn = document.getElementById('reg-submit-btn');
+        const loginTab = document.getElementById('tab-login');
+        const registerTab = document.getElementById('tab-register');
+        
+        loginTab.classList.add('active');
+        loginTab.style.background = 'rgba(255,255,255,0.05)';
+        registerTab.classList.remove('active');
+        registerTab.style.background = 'transparent';
+        
+        document.getElementById('auth-title').innerHTML = '<i class="fa-solid fa-right-to-bracket title-icon"></i> Hesabınıza Giriş Yapın';
+        document.getElementById('auth-subtitle').innerText = 'Masa oyunu platformuna erişmek için bilgilerinizi girin.';
+        document.getElementById('register-fields-group').classList.add('hidden');
+        
+        submitBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Giriş Yap';
+        submitBtn.dataset.authMode = 'login';
+        
+        document.getElementById('auth-email').value = '';
+        document.getElementById('auth-password').value = '';
+        document.getElementById('reg-username').value = '';
+    }
+
+    async logout() {
+        await firebase.auth().signOut();
     }
 }
 
@@ -255,7 +317,6 @@ class FirebaseManager {
     constructor() {
         this.app = null;
         this.db = null;
-        this.config = null;
         this.roomRef = null;
         
         this.roomCode = null;
@@ -267,37 +328,10 @@ class FirebaseManager {
         this.onPlayersChanged = null;
     }
 
-    loadConfig() {
-        const saved = localStorage.getItem('boardgame_hub_firebase_config');
-        if (saved) {
-            try {
-                this.config = JSON.parse(saved);
-                this.initializeFirebase();
-            } catch(e) {
-                console.error("Firebase saved config load failed", e);
-            }
-        }
-    }
-
-    saveConfig(configStr) {
-        try {
-            const config = JSON.parse(configStr);
-            localStorage.setItem('boardgame_hub_firebase_config', JSON.stringify(config));
-            this.config = config;
-            this.initializeFirebase();
-            return true;
-        } catch(e) {
-            alert("Geçersiz JSON formatı!");
-            return false;
-        }
-    }
-
     initializeFirebase() {
-        if (!this.config) return;
         try {
-            // Check if already initialized to avoid re-init error
             if (firebase.apps.length === 0) {
-                this.app = firebase.initializeApp(this.config);
+                this.app = firebase.initializeApp(firebaseConfig);
             } else {
                 this.app = firebase.app();
             }
@@ -321,10 +355,7 @@ class FirebaseManager {
     }
 
     async createRoom(gameName, hostAccount) {
-        if (!this.isConfigured()) {
-            alert("Firebase yapılandırılmamış!");
-            return null;
-        }
+        if (!this.isConfigured()) return null;
         this.roomCode = this.generateRoomCode();
         this.gameName = gameName;
         this.myPlayerKey = 'player1';
@@ -353,10 +384,7 @@ class FirebaseManager {
     }
 
     async joinRoom(roomCode, gameName, guestAccount) {
-        if (!this.isConfigured()) {
-            alert("Firebase yapılandırılmamış!");
-            return null;
-        }
+        if (!this.isConfigured()) return null;
         const cleanedCode = roomCode.trim().toUpperCase();
         this.roomRef = this.db.ref(`rooms/${cleanedCode}`);
         
@@ -384,7 +412,6 @@ class FirebaseManager {
             return null;
         }
 
-        // Determine next slot
         let myKey = null;
         for (let i = 1; i <= maxPlayers; i++) {
             if (!currentPlayers[`player${i}`]) {
@@ -419,7 +446,6 @@ class FirebaseManager {
     disconnect() {
         if (this.roomRef) {
             if (this.myPlayerKey) {
-                // Remove player from database
                 this.roomRef.child('players').child(this.myPlayerKey).remove();
             }
             this.roomRef.off();
@@ -433,13 +459,11 @@ class FirebaseManager {
     listenToRoom() {
         if (!this.roomRef) return;
         
-        // Listen players list
         this.roomRef.child('players').on('value', (snapshot) => {
             const players = snapshot.val() || {};
             if (this.onPlayersChanged) this.onPlayersChanged(players);
         });
 
-        // Listen game status / state updates
         this.roomRef.on('value', (snapshot) => {
             const roomVal = snapshot.val();
             if (roomVal && this.onRoomStateChanged) {
@@ -454,7 +478,6 @@ class FirebaseManager {
         }
     }
     
-    // Allow non-hosts to also post their turn updates
     updatePlayerStateDirect(state) {
         if (this.roomRef) {
             this.roomRef.child('state').set(state);
@@ -724,7 +747,6 @@ class LudoEngine {
             } else {
                 this.render();
                 if (this.state.players[color].type === 'ai') {
-                    // Host client coordinates local AI decision even in online lobby
                     if (!this.app.firebase.isMultiplayerActive || this.app.firebase.myPlayerKey === 'player1') {
                         setTimeout(() => this.makeAIMove(playable), 1000);
                     }
@@ -826,7 +848,7 @@ class LudoEngine {
                 remaining--;
                 if (remaining === 4) return { type: 'finished' };
                 else if (remaining < 4) return { type: 'homePath', index: remaining };
-                else return { type: 'track', index: curr }; // bounce or wait standard
+                else return { type: 'track', index: curr }; 
             }
             index = (index + 1) % 52;
             remaining--;
@@ -868,12 +890,10 @@ class LudoEngine {
         
         if (isAI) {
             diceBtn.disabled = true;
-            // Online mode: only host performs AI roll calculations
             if (!this.app.firebase.isMultiplayerActive || this.app.firebase.myPlayerKey === 'player1') {
                 setTimeout(() => this.rollDice(), 1200);
             }
         } else {
-            // Check if player has rolled
             diceBtn.disabled = !this.isMyTurn() || this.state.hasRolled;
         }
     }
@@ -896,7 +916,7 @@ class LudoEngine {
                             if (opp === this.getCurrentPlayerColor()) return;
                             this.state.tokens[opp].forEach(oppT => {
                                 if (oppT.posType === 'track' && oppT.posIndex === next.index) {
-                                    score = 100; // Capture priority
+                                    score = 100;
                                 }
                             });
                         });
@@ -928,15 +948,16 @@ class LudoEngine {
 
     handleWin(color) {
         this.app.sounds.playWin();
-        const account = this.app.accounts.getActiveAccount();
-        if (account) {
-            account.played += 1;
-            // Win credited if matches current user color / role
-            if (this.state.players[color] && this.state.players[color].type === 'human') {
-                account.wins += 1;
-            }
-            this.app.accounts.save();
+        
+        let isMe = false;
+        if (this.app.firebase.isMultiplayerActive) {
+            const p = this.state.players[color];
+            isMe = p && p.playerKey === this.app.firebase.myPlayerKey;
+        } else {
+            isMe = this.state.players[color] && this.state.players[color].type === 'human';
         }
+        
+        this.app.accounts.updateStats(isMe);
 
         document.getElementById('winner-title').innerText = "Tebrikler!";
         document.getElementById('winner-text').innerText = `Oyunu ${COLOR_NAMES[color]} kazandı!`;
@@ -953,7 +974,6 @@ class LudoEngine {
     }
 
     render() {
-        // Clear old tokens
         document.querySelectorAll('.token-container').forEach(el => el.remove());
         document.querySelectorAll('.token').forEach(el => el.remove());
 
@@ -974,7 +994,6 @@ class LudoEngine {
             });
         });
 
-        // Draw tokens
         Object.keys(placement).forEach(key => {
             const [r, c] = key.split(',').map(Number);
             const tokens = placement[key];
@@ -996,7 +1015,6 @@ class LudoEngine {
             }
         });
 
-        // Update turn display info
         const activeColor = this.getCurrentPlayerColor();
         if (activeColor) {
             const display = document.getElementById('current-player-display');
@@ -1005,14 +1023,12 @@ class LudoEngine {
             const p = this.state.players[activeColor];
             nameSpan.innerText = `${COLOR_NAMES[activeColor]} (${p.type === 'ai' ? 'Yapay Zeka' : 'İnsan'})`;
             
-            // Dice glow class
             const dice3D = document.getElementById('dice-3d');
             dice3D.className = 'dice';
             if (!this.state.hasRolled && p.type !== 'ai' && this.isMyTurn()) {
                 dice3D.classList.add(`roll-active-${activeColor}`);
             }
 
-            // Sync dice value face visually on all clients
             if (this.state.diceVal !== null) {
                 this.setDiceFace(this.state.diceVal);
                 const badge = document.getElementById('roll-result-badge');
@@ -1023,7 +1039,6 @@ class LudoEngine {
             }
         }
 
-        // Side ranks
         COLORS.forEach(color => {
             const row = document.getElementById(`status-${color}`);
             if (!row) return;
@@ -1090,7 +1105,7 @@ class SOSEngine {
         this.state = {
             boardSize: 4,
             player2Type: 'ai',
-            board: [], // char: 'S'|'O'|'', owner: 1|2
+            board: [], 
             currentPlayer: 1,
             scores: { 1: 0, 2: 0 },
             activeLetter: 'S',
@@ -1196,7 +1211,6 @@ class SOSEngine {
                     }
                 }
             } else {
-                // Forward
                 const r1_1 = r + dr, c1_1 = c + dc;
                 const r1_2 = r + 2 * dr, c1_2 = c + 2 * dc;
                 if (r1_2 >= 0 && r1_2 < size && c1_2 >= 0 && c1_2 < size) {
@@ -1207,7 +1221,6 @@ class SOSEngine {
                         if (!this.state.completedSOS.includes(key)) found.push({ tripletKey: key });
                     }
                 }
-                // Backward
                 const r2_1 = r - dr, c2_1 = c - dc;
                 const r2_2 = r - 2 * dr, c2_2 = c - 2 * dc;
                 if (r2_2 >= 0 && r2_2 < size && c2_2 >= 0 && c2_2 < size) {
@@ -1231,7 +1244,6 @@ class SOSEngine {
 
         if (empty.length === 0) return;
 
-        // 1. Check immediate win
         for (let idx of empty) {
             this.state.board[idx].char = 'S';
             let matches = this.checkSOSFormed(idx, 'S');
@@ -1244,7 +1256,6 @@ class SOSEngine {
             if (matches.length > 0) { this.applyMove(idx, 'O'); return; }
         }
 
-        // 2. Block opponent
         for (let idx of empty) {
             this.state.board[idx].char = 'S';
             let matches = this.checkSOSFormed(idx, 'S');
@@ -1257,7 +1268,6 @@ class SOSEngine {
             if (matches.length > 0) { this.applyMove(idx, 'S'); return; }
         }
 
-        // 3. Random choice
         const rand = empty[Math.floor(Math.random() * empty.length)];
         const char = Math.random() > 0.5 ? 'S' : 'O';
         this.applyMove(rand, char);
@@ -1265,14 +1275,17 @@ class SOSEngine {
 
     handleGameOver() {
         this.app.sounds.playWin();
-        const account = this.app.accounts.getActiveAccount();
-        if (account) {
-            account.played += 1;
-            if (this.state.scores[1] > this.state.scores[2]) {
-                account.wins += 1;
-            }
-            this.app.accounts.save();
+        
+        let isMe = false;
+        if (this.app.firebase.isMultiplayerActive) {
+            const myNum = this.app.firebase.myPlayerKey === 'player1' ? 1 : 2;
+            const winnerNum = this.state.scores[1] > this.state.scores[2] ? 1 : (this.state.scores[2] > this.state.scores[1] ? 2 : 0);
+            isMe = myNum === winnerNum;
+        } else {
+            isMe = this.state.scores[1] > this.state.scores[2];
         }
+        
+        this.app.accounts.updateStats(isMe);
 
         let txt = "";
         if (this.state.scores[1] > this.state.scores[2]) txt = "Oyuncu 1 kazandı!";
@@ -1322,7 +1335,6 @@ class SOSEngine {
             grid.appendChild(el);
         });
 
-        // UI Score updates
         document.getElementById('sos-status-p1').querySelector('.player-name').innerText = `Oyuncu 1: ${this.state.scores[1]} SOS`;
         const p2Str = this.state.player2Type === 'ai' ? 'Yapay Zeka' : 'Oyuncu 2';
         document.getElementById('sos-status-p2').querySelector('.player-name').innerText = `${p2Str}: ${this.state.scores[2]} SOS`;
@@ -1351,34 +1363,25 @@ class SOSEngine {
 class App {
     constructor() {
         this.sounds = new SoundEngine();
-        this.accounts = new AccountManager();
         this.firebase = new FirebaseManager();
+        this.accounts = new AccountManager(this);
         this.navigation = new NavigationManager(this);
         this.ludo = new LudoEngine(this);
         this.sos = new SOSEngine(this);
     }
 
     init() {
-        this.accounts.load();
-        this.firebase.loadConfig();
+        this.firebase.initializeFirebase();
         this.ludo.init();
         
         this.initDOMEvents();
         this.setupMultiplayerSync();
         
-        // Auto-login or Setup
-        if (this.accounts.accounts.length === 0) {
-            this.navigation.showPanel('profile-setup-panel');
-            document.getElementById('reg-cancel-btn').classList.add('hidden');
-        } else {
-            if (!this.accounts.activeUsername || !this.accounts.accounts.some(a => a.username === this.accounts.activeUsername)) {
-                this.accounts.activeUsername = this.accounts.accounts[0].username;
-            }
-            this.navigation.showPanel('hub-panel');
-            this.accounts.updateProfileUI();
-        }
+        // Listen to Auth State
+        firebase.auth().onAuthStateChanged((user) => {
+            this.accounts.loadProfile(user);
+        });
 
-        // Resume active session
         this.resumeActiveSessions();
     }
 
@@ -1418,26 +1421,8 @@ class App {
             this.navigation.showPanel('hub-panel');
         });
 
-        // Header controls
-        document.getElementById('firebase-config-btn').addEventListener('click', () => {
-            const modal = document.getElementById('firebase-config-modal');
-            const input = document.getElementById('firebase-config-input');
-            if (this.firebase.config) {
-                input.value = JSON.stringify(this.firebase.config, null, 2);
-            } else {
-                input.value = '';
-            }
-            modal.classList.remove('hidden');
-        });
-        document.getElementById('close-firebase-btn').addEventListener('click', () => {
-            document.getElementById('firebase-config-modal').classList.add('hidden');
-        });
-        document.getElementById('save-firebase-btn').addEventListener('click', () => {
-            const val = document.getElementById('firebase-config-input').value;
-            if (this.firebase.saveConfig(val)) {
-                document.getElementById('firebase-config-modal').classList.add('hidden');
-            }
-        });
+        // Hide old config button actions
+        document.getElementById('firebase-config-btn').style.display = 'none';
 
         document.getElementById('rules-btn').addEventListener('click', () => this.navigation.openRules());
         document.getElementById('close-rules-btn').addEventListener('click', () => this.navigation.closeRules());
@@ -1449,35 +1434,93 @@ class App {
 
         document.getElementById('theme-btn').addEventListener('click', () => this.navigation.toggleTheme());
 
-        // Account form
-        document.getElementById('reg-submit-btn').addEventListener('click', () => {
-            const username = document.getElementById('reg-username').value.trim();
-            if (!username) return alert("Geçersiz kullanıcı adı!");
-            
-            const avatar = document.querySelector('input[name="reg-avatar"]:checked').value;
-            const color = document.querySelector('input[name="reg-color"]:checked').value;
-            
-            this.accounts.createProfile(username, avatar, color);
-            document.getElementById('reg-username').value = '';
-            this.navigation.showPanel('hub-panel');
+        // Auth Tabs toggling
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const submitBtn = document.getElementById('reg-submit-btn');
+
+        tabLogin.addEventListener('click', () => {
+            this.accounts.resetAuthUI();
         });
 
-        document.getElementById('reg-cancel-btn').addEventListener('click', () => {
-            if (this.accounts.accounts.length > 0) this.navigation.showPanel('hub-panel');
+        tabRegister.addEventListener('click', () => {
+            tabRegister.classList.add('active');
+            tabRegister.style.background = 'rgba(255,255,255,0.05)';
+            tabLogin.classList.remove('active');
+            tabLogin.style.background = 'transparent';
+
+            document.getElementById('auth-title').innerHTML = '<i class="fa-solid fa-user-plus title-icon"></i> Yeni Hesap Oluştur';
+            document.getElementById('auth-subtitle').innerText = 'Masa oyunu platformuna kayıt olmak için bilgilerinizi girin.';
+            document.getElementById('register-fields-group').classList.remove('hidden');
+            
+            submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Kayıt Ol';
+            submitBtn.dataset.authMode = 'register';
         });
 
-        document.getElementById('hub-new-profile-btn').addEventListener('click', () => {
-            document.getElementById('reg-username').value = '';
-            document.getElementById('reg-cancel-btn').classList.remove('hidden');
+        // Auth Actions handler
+        submitBtn.addEventListener('click', async () => {
+            const mode = submitBtn.dataset.authMode || 'login';
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+
+            if (mode === 'login') {
+                if (!email || !password) return alert("E-posta ve şifrenizi girin!");
+                try {
+                    await firebase.auth().signInWithEmailAndPassword(email, password);
+                } catch(e) {
+                    alert("Giriş başarısız: " + e.message);
+                }
+            } else if (mode === 'register') {
+                if (!email || !password) return alert("E-posta ve şifrenizi girin!");
+                const username = document.getElementById('reg-username').value.trim();
+                if (!username) return alert("Lütfen kullanıcı adı girin!");
+                try {
+                    await firebase.auth().createUserWithEmailAndPassword(email, password);
+                    // The auth state listener will automatically trigger loadProfile(),
+                    // which will see no DB profile and switch UI to profile-setup mode!
+                } catch(e) {
+                    alert("Kayıt başarısız: " + e.message);
+                }
+            } else if (mode === 'profile-setup') {
+                const username = document.getElementById('reg-username').value.trim();
+                if (!username) return alert("Lütfen kullanıcı adı girin!");
+                
+                const avatar = document.querySelector('input[name="reg-avatar"]:checked').value;
+                const color = document.querySelector('input[name="reg-color"]:checked').value;
+                
+                await this.accounts.saveProfile(username, avatar, color);
+            }
+        });
+
+        // Edit profile & Log out handlers
+        document.getElementById('hub-edit-profile-btn').addEventListener('click', () => {
+            // Put UI in profile setup edit mode
             this.navigation.showPanel('profile-setup-panel');
+            document.getElementById('register-fields-group').classList.remove('hidden');
+            document.getElementById('auth-title').innerHTML = '<i class="fa-solid fa-user-gear title-icon"></i> Profili Düzenle';
+            document.getElementById('auth-subtitle').innerText = 'Profil detaylarınızı güncelleyin.';
+            
+            // Hide email/password fields
+            document.getElementById('auth-email').closest('.form-group').classList.add('hidden');
+            document.getElementById('auth-password').closest('.form-group').classList.add('hidden');
+            document.querySelector('.auth-tabs').classList.add('hidden');
+            
+            const submitBtn = document.getElementById('reg-submit-btn');
+            submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Güncellemeleri Kaydet';
+            submitBtn.dataset.authMode = 'profile-setup';
+            
+            // Populate current values
+            if (this.accounts.profileData) {
+                document.getElementById('reg-username').value = this.accounts.profileData.username;
+                const avatarRad = document.querySelector(`input[name="reg-avatar"][value="${this.accounts.profileData.avatar}"]`);
+                if (avatarRad) avatarRad.checked = true;
+                const colorRad = document.querySelector(`input[name="reg-color"][value="${this.accounts.profileData.color}"]`);
+                if (colorRad) colorRad.checked = true;
+            }
         });
 
-        document.getElementById('hub-switch-profile-btn').addEventListener('click', () => {
-            this.updateSwitcherUI();
-            document.getElementById('profile-switch-modal').classList.remove('hidden');
-        });
-        document.getElementById('close-profile-switch-btn').addEventListener('click', () => {
-            document.getElementById('profile-switch-modal').classList.add('hidden');
+        document.getElementById('hub-logout-btn').addEventListener('click', () => {
+            this.accounts.logout();
         });
 
         // Game setup pages navigation
@@ -1495,13 +1538,12 @@ class App {
             this.navigation.showPanel('hub-panel');
         });
 
-        // Online mode game lobby triggers
         document.getElementById('btn-play-ludo-online').addEventListener('click', () => {
-            if (!this.firebase.isConfigured()) return alert("Öncelikle Firebase'i yapılandırmalısınız!");
+            if (!this.firebase.isConfigured()) return alert("Firebase bağlantısı kurulamadı!");
             this.openMultiplayerLobby('ludo');
         });
         document.getElementById('btn-play-sos-online').addEventListener('click', () => {
-            if (!this.firebase.isConfigured()) return alert("Öncelikle Firebase'i yapılandırmalısınız!");
+            if (!this.firebase.isConfigured()) return alert("Firebase bağlantısı kurulamadı!");
             this.openMultiplayerLobby('sos');
         });
 
@@ -1512,7 +1554,7 @@ class App {
 
         // Lobby Actions
         document.getElementById('btn-create-room').addEventListener('click', async () => {
-            const acc = this.accounts.getActiveAccount();
+            const acc = this.accounts.profileData;
             const code = await this.firebase.createRoom(this.firebase.gameName, acc);
             if (code) {
                 document.getElementById('lobby-room-details').classList.remove('hidden');
@@ -1522,7 +1564,7 @@ class App {
 
         document.getElementById('btn-join-room').addEventListener('click', async () => {
             const input = document.getElementById('join-room-code-input').value;
-            const acc = this.accounts.getActiveAccount();
+            const acc = this.accounts.profileData;
             const code = await this.firebase.joinRoom(input, this.firebase.gameName, acc);
             if (code) {
                 document.getElementById('lobby-room-details').classList.remove('hidden');
@@ -1602,53 +1644,6 @@ class App {
         });
     }
 
-    updateSwitcherUI() {
-        const container = document.getElementById('profiles-list-container');
-        container.innerHTML = '';
-        this.accounts.accounts.forEach(acc => {
-            const item = document.createElement('div');
-            item.className = `profile-item ${acc.username === this.accounts.activeUsername ? 'active-profile' : ''}`;
-            const ratio = acc.played > 0 ? Math.round((acc.wins / acc.played) * 100) : 0;
-            
-            item.innerHTML = `
-                <div class="profile-item-info">
-                    <div class="profile-item-avatar theme-${acc.color}" style="background: var(--color-${acc.color}); box-shadow: 0 0 10px var(--color-${acc.color});">
-                        <i class="fa-solid ${acc.avatar}"></i>
-                    </div>
-                    <div>
-                        <div class="profile-item-name">${acc.username}</div>
-                        <div class="profile-item-stats">Maç: ${acc.played} | Galibiyet: ${acc.wins} (%${ratio})</div>
-                    </div>
-                </div>
-                ${this.accounts.accounts.length > 1 ? `<button class="profile-item-delete" title="Profili Sil"><i class="fa-solid fa-trash"></i></button>` : ''}
-            `;
-
-            item.addEventListener('click', (e) => {
-                if (e.target.closest('.profile-item-delete')) return;
-                this.accounts.activeUsername = acc.username;
-                this.accounts.save();
-                document.getElementById('profile-switch-modal').classList.add('hidden');
-            });
-
-            const del = item.querySelector('.profile-item-delete');
-            if (del) {
-                del.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (confirm(`"${acc.username}" silinecektir. Emin misiniz?`)) {
-                        this.accounts.deleteProfile(acc.username);
-                        this.updateSwitcherUI();
-                        if (this.accounts.accounts.length === 0) {
-                            document.getElementById('profile-switch-modal').classList.add('hidden');
-                            document.getElementById('reg-cancel-btn').classList.add('hidden');
-                            this.navigation.showPanel('profile-setup-panel');
-                        }
-                    }
-                });
-            }
-            container.appendChild(item);
-        });
-    }
-
     openMultiplayerLobby(gameName) {
         this.firebase.gameName = gameName;
         document.getElementById('lobby-game-name').innerText = gameName === 'ludo' ? 'Kızma Birader' : 'SOS Oyunu';
@@ -1678,7 +1673,6 @@ class App {
                 ul.appendChild(li);
             });
 
-            // Start button control (Host controls this, minimum 2 players)
             const startBtn = document.getElementById('btn-start-multiplayer-game');
             if (this.firebase.myPlayerKey === 'player1') {
                 startBtn.classList.remove('hidden');
@@ -1731,12 +1725,9 @@ class App {
 
         if (this.firebase.gameName === 'ludo') {
             const playersConfig = {};
-            const dbPlayers = [];
-            
             this.firebase.roomRef.child('players').once('value', (snapshot) => {
                 const players = snapshot.val();
                 
-                // Red = player1, Green = player2, Yellow = player3, Blue = player4
                 playersConfig['red'] = players.player1 ? { type: 'human', finished: 0, playerKey: 'player1', username: players.player1.username } : { type: 'none' };
                 playersConfig['green'] = players.player2 ? { type: 'human', finished: 0, playerKey: 'player2', username: players.player2.username } : { type: 'none' };
                 playersConfig['yellow'] = players.player3 ? { type: 'human', finished: 0, playerKey: 'player3', username: players.player3.username } : { type: 'none' };
