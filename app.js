@@ -1011,6 +1011,16 @@ class LudoEngine {
             if (!this.state.hasRolled && p.type !== 'ai' && this.isMyTurn()) {
                 dice3D.classList.add(`roll-active-${activeColor}`);
             }
+
+            // Sync dice value face visually on all clients
+            if (this.state.diceVal !== null) {
+                this.setDiceFace(this.state.diceVal);
+                const badge = document.getElementById('roll-result-badge');
+                badge.innerText = this.state.diceVal;
+                badge.classList.remove('hidden');
+            } else {
+                document.getElementById('roll-result-badge').classList.add('hidden');
+            }
         }
 
         // Side ranks
@@ -1681,18 +1691,35 @@ class App {
         this.firebase.onRoomStateChanged = (roomVal) => {
             if (roomVal.status === 'playing' && roomVal.state) {
                 if (this.firebase.gameName === 'ludo') {
+                    const isNewRoll = this.ludo.state && this.ludo.state.diceVal !== roomVal.state.diceVal && roomVal.state.diceVal !== null;
+                    const isNewMove = this.ludo.state && JSON.stringify(this.ludo.state.tokens) !== JSON.stringify(roomVal.state.tokens);
+
                     if (document.getElementById('game-panel').classList.contains('hidden')) {
                         this.navigation.showPanel('game-panel');
                     }
                     this.ludo.state = roomVal.state;
                     this.ludo.render();
+
+                    if (isNewRoll) {
+                        this.sounds.playRoll();
+                    } else if (isNewMove) {
+                        this.sounds.playMove();
+                    }
+
                     this.ludo.checkAndTriggerAI();
                 } else if (this.firebase.gameName === 'sos') {
+                    const isNewMove = this.sos.state && JSON.stringify(this.sos.state.board) !== JSON.stringify(roomVal.state.board);
+
                     if (document.getElementById('sos-game-panel').classList.contains('hidden')) {
                         this.navigation.showPanel('sos-game-panel');
                     }
                     this.sos.state = roomVal.state;
                     this.sos.render();
+
+                    if (isNewMove) {
+                        this.sounds.playMove();
+                    }
+
                     this.sos.checkAndTriggerAI();
                 }
             }
